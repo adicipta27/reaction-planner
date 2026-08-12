@@ -11,6 +11,7 @@ import {
   orderBy, 
   serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/+esm";
 
 // Firebase Config
 const firebaseConfig = {
@@ -39,6 +40,8 @@ const historySubTitle = document.getElementById("historySubTitle");
 
 // Elemen DOM Utama
 const tiktokUrlInput = document.getElementById("tiktokUrl");
+const btnPaste = document.getElementById("btnPaste");
+const tiktokDurationInput = document.getElementById("tiktokDuration");
 const tiktokCaptionInput = document.getElementById("tiktokCaption");
 const tiktokCategoryInput = document.getElementById("tiktokCategory");
 const btnFetch = document.getElementById("btnFetch");
@@ -50,11 +53,14 @@ const countBank = document.getElementById("countBank");
 const btnCopySyuting = document.getElementById("btnCopySyuting");
 const btnSelesaiSyuting = document.getElementById("btnSelesaiSyuting");
 const categoryTabs = document.getElementById("categoryTabs");
+const totalYtDuration = document.getElementById("totalYtDuration");
+const badgeTikTokSum = document.getElementById("badgeTikTokSum");
 
 // Elemen Modal Edit
 const editModal = document.getElementById("editModal");
 const modalCaptionInput = document.getElementById("modalCaptionInput");
 const modalCategoryInput = document.getElementById("modalCategoryInput");
+const modalDurationInput = document.getElementById("modalDurationInput");
 const btnCancelEdit = document.getElementById("btnCancelEdit");
 const btnCloseModalX = document.getElementById("btnCloseModalX");
 const btnSaveEdit = document.getElementById("btnSaveEdit");
@@ -84,6 +90,68 @@ let currentSyutingItems = [];
 let currentBankItems = [];
 let selectedCategory = "Semua";
 let hasCopiedSyuting = false;
+
+// ==================== DRAG & DROP (SORTABLE.JS) ==================== //
+Sortable.create(listSyuting, {
+  animation: 200,
+  handle: ".drag-handle",
+  ghostClass: "opacity-40",
+  onEnd: async () => {
+    const cardElements = listSyuting.querySelectorAll("[data-id]");
+    
+    const updatePromises = Array.from(cardElements).map((el, newIndex) => {
+      const docId = el.getAttribute("data-id");
+      return updateDoc(doc(db, "videos", docId), { order: newIndex });
+    });
+
+    try {
+      await Promise.all(updatePromises);
+    } catch (err) {
+      console.error("Gagal memperbarui urutan:", err);
+      showCustomAlert("Gagal Urutkan", "Terjadi kesalahan saat menyusun ulang urutan syuting.");
+    }
+  }
+});
+
+// ==================== HELPER KONVERSI DURASI ==================== //
+
+// Mengubah input fleksibel (contoh: "1.25", "1:25", "45") menjadi total detik
+function parseDurationToSeconds(val) {
+  if (!val) return 0;
+  const str = String(val).trim().replace(',', '.');
+  
+  if (str.includes('.') || str.includes(':')) {
+    const parts = str.split(/[\.:]/);
+    const minutes = parseInt(parts[0], 10) || 0;
+    let secStr = parts[1] || "0";
+    if (secStr.length === 1) secStr = secStr + "0";
+    const seconds = parseInt(secStr, 10) || 0;
+    return (minutes * 60) + seconds;
+  }
+  
+  return parseInt(str, 10) || 0;
+}
+
+// Format detik ke teks tampilan rapi (contoh: 85 -> "1m 25s", 45 -> "45s")
+function formatDurationText(totalSec) {
+  if (!totalSec || totalSec <= 0) return "0s";
+  if (totalSec < 60) return `${totalSec}s`;
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+}
+
+// Format detik ke format input edit (contoh: 85 -> "1.25", 45 -> "45")
+function secondsToFormatInput(totalSec) {
+  if (!totalSec || totalSec <= 0) return "";
+  if (totalSec < 60) return String(totalSec);
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  const secsFormatted = secs < 10 ? `0${secs}` : `${secs}`;
+  return `${mins}.${secsFormatted}`;
+}
+
+// =============================================================== //
 
 // SOUND EFFECT ALERT
 function playAlertSound() {
@@ -161,6 +229,26 @@ function updateSelesaiBtnState() {
   }
 }
 
+// FITUR PASTE DARI CLIPBOARD
+if (btnPaste) {
+  btnPaste.addEventListener("click", async () => {
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.readText) {
+        return showCustomAlert("Fitur Tidak Didukung", "Browser tidak mendukung akses clipboard otomatis. Silakan tempel manual.");
+      }
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        tiktokUrlInput.value = text.trim();
+      } else {
+        showCustomAlert("Clipboard Kosong", "Tidak ada teks yang disalin di clipboard Anda.");
+      }
+    } catch (err) {
+      console.error("Gagal membaca clipboard:", err);
+      showCustomAlert("Izin Ditolak", "Gagal mengakses clipboard. Pastikan Anda memberikan izin akses clipboard di browser.");
+    }
+  });
+}
+
 // 1. AMBIL CAPTION & THUMBNAIL TIKTOK
 btnFetch.addEventListener("click", async () => {
   const url = tiktokUrlInput.value.trim();
@@ -187,10 +275,15 @@ btnFetch.addEventListener("click", async () => {
 // 2. SIMPAN KE BANK VIDEO
 btnSave.addEventListener("click", async () => {
   const url = tiktokUrlInput.value.trim();
+  const rawDuration = tiktokDurationInput.value.trim();
+  const parsedSeconds = parseDurationToSeconds(rawDuration);
   const caption = tiktokCaptionInput.value.trim();
   const manualCategory = tiktokCategoryInput.value.trim() || "Lainnya";
 
   if (!url) return showCustomAlert("Input Kosong!", "Link TikTok tidak boleh kosong!");
+  if (!rawDuration || parsedSeconds <= 0) {
+    return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid! Contoh: 45 (45 detik) atau 1.25 (1 menit 25 detik)");
+  }
 
   let thumbnailToSave = currentThumbnail;
 
@@ -213,6 +306,7 @@ btnSave.addEventListener("click", async () => {
     await addDoc(videosRef, {
       channel: activeChannel,
       url: url,
+      duration: parsedSeconds,
       caption: finalCaption,
       thumbnail: thumbnailToSave,
       category: manualCategory,
@@ -222,6 +316,7 @@ btnSave.addEventListener("click", async () => {
     });
 
     tiktokUrlInput.value = "";
+    tiktokDurationInput.value = "";
     tiktokCaptionInput.value = "";
     tiktokCategoryInput.value = "";
     currentThumbnail = "";
@@ -242,6 +337,32 @@ onSnapshot(q, (snapshot) => {
   renderApp(allRawVideos);
 });
 
+// FUNSI HITUNG TOTAL ESTIMASI HASIL EDIT YOUTUBE
+function calculateYtEditDuration(items) {
+  if (!items || items.length === 0) {
+    return { formatted: "0 Menit 0 Detik", tiktokSumFormatted: "0s" };
+  }
+
+  const fixedElementsSec = 45 + 6 + 45 + 75 + 20;
+
+  let tiktokSumSec = 0;
+  items.forEach(item => {
+    const d = parseInt(item.duration) || 0;
+    tiktokSumSec += d;
+  });
+
+  const totalVideoReactionSec = tiktokSumSec + (items.length * 60);
+  const grandTotalSec = fixedElementsSec + totalVideoReactionSec;
+
+  const minutes = Math.floor(grandTotalSec / 60);
+  const seconds = grandTotalSec % 60;
+
+  return {
+    formatted: `${minutes} Menit ${seconds} Detik`,
+    tiktokSumFormatted: formatDurationText(tiktokSumSec)
+  };
+}
+
 // 4. RENDER APLIKASI
 function renderApp(items) {
   const channelFilteredItems = items.filter(item => 
@@ -256,6 +377,10 @@ function renderApp(items) {
 
   countSyuting.innerText = currentSyutingItems.length;
   countBank.innerText = currentBankItems.length;
+
+  const ytCalc = calculateYtEditDuration(currentSyutingItems);
+  totalYtDuration.innerText = ytCalc.formatted;
+  badgeTikTokSum.innerText = `Total Bahan: ${ytCalc.tiktokSumFormatted}`;
 
   if (currentSyutingItems.length === 0) {
     hasCopiedSyuting = false;
@@ -274,24 +399,32 @@ function renderApp(items) {
       : '';
 
     const categoryTag = item.category || "Lainnya";
+    const itemDurationSec = item.duration || 0;
+    const itemDurationFormatted = formatDurationText(itemDurationSec);
 
     return `
-      <div class="bg-neutral-50 border border-orange-200/90 hover:border-orange-400 transition-all p-4 rounded-2xl flex gap-4 items-start shadow-sm">
+      <div data-id="${item.id}" class="bg-neutral-50 border border-orange-200/90 hover:border-orange-400 transition-all p-4 rounded-2xl flex gap-4 items-start shadow-sm relative group">
         ${imgHtml}
         <div class="flex-1 space-y-3 min-w-0">
           <div class="flex items-center justify-between gap-2 flex-wrap">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Handle Drag & Drop -->
+              <div class="drag-handle cursor-grab active:cursor-grabbing text-neutral-400 hover:text-orange-600 px-2 py-0.5 rounded border border-neutral-200 bg-white text-xs font-bold transition-colors select-none flex items-center gap-1 shadow-xs" title="Geser untuk mengatur urutan">
+                <span>⋮⋮</span>
+                <span class="text-[10px] text-neutral-500 font-normal">Geser</span>
+              </div>
               <span class="bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-sm">
                 #${index + 1}
               </span>
               <span class="bg-red-50 text-red-600 text-xs px-2.5 py-1 rounded-lg border border-red-200 font-semibold">
                 🏷️ ${categoryTag}
               </span>
+              <span class="bg-neutral-900 text-white text-xs px-2.5 py-1 rounded-lg font-bold shadow-sm">
+                ⏱️ ${itemDurationFormatted}
+              </span>
             </div>
             <div class="flex items-center gap-1.5">
-              <button onclick="moveOrder('${item.id}', ${index - 1})" ${index === 0 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="bg-white hover:bg-neutral-200 text-neutral-700 text-xs px-2.5 py-1 rounded-lg border border-neutral-300">▲</button>
-              <button onclick="moveOrder('${item.id}', ${index + 1})" ${index === currentSyutingItems.length - 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="bg-white hover:bg-neutral-200 text-neutral-700 text-xs px-2.5 py-1 rounded-lg border border-neutral-300">▼</button>
-              <button onclick="toggleStatus('${item.id}', 'bank')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs px-2.5 py-1 rounded-lg ml-1 font-semibold">Kembalikan</button>
+              <button onclick="toggleStatus('${item.id}', 'bank')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs px-2.5 py-1 rounded-lg ml-1 font-semibold transition-all">Kembalikan</button>
             </div>
           </div>
           
@@ -305,7 +438,7 @@ function renderApp(items) {
           <div class="flex justify-between items-center text-xs pt-2 border-t border-neutral-200">
             <a href="${item.url}" target="_blank" class="text-orange-600 hover:text-orange-700 font-bold text-sm">Buka TikTok ↗</a>
             <div class="space-x-3 text-sm">
-              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`)" class="text-neutral-600 hover:text-black font-semibold">Edit Note</button>
+              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`, ${itemDurationSec})" class="text-neutral-600 hover:text-black font-semibold">Edit</button>
             </div>
           </div>
         </div>
@@ -366,14 +499,19 @@ function renderBankList() {
       : '';
 
     const categoryTag = item.category || "Lainnya";
+    const itemDurationSec = item.duration || 0;
+    const itemDurationFormatted = formatDurationText(itemDurationSec);
 
     return `
       <div class="bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition-all p-4 rounded-2xl flex gap-4 items-start shadow-sm">
         ${imgHtml}
         <div class="flex-1 space-y-3 min-w-0">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 flex-wrap">
             <span class="bg-neutral-200 text-neutral-800 text-xs px-2.5 py-1 rounded-lg border border-neutral-300 font-semibold">
               🏷️ ${categoryTag}
+            </span>
+            <span class="bg-neutral-900 text-white text-xs px-2.5 py-1 rounded-lg font-bold shadow-sm">
+              ⏱️ ${itemDurationFormatted}
             </span>
           </div>
 
@@ -388,7 +526,7 @@ function renderBankList() {
             <a href="${item.url}" target="_blank" class="text-neutral-600 hover:text-black font-semibold text-sm">Buka TikTok ↗</a>
             <div class="space-x-3 text-sm flex items-center">
               <button onclick="toggleStatus('${item.id}', 'syuting')" class="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-all">+ Pilih Syuting</button>
-              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`)" class="text-neutral-600 hover:text-black font-medium">Edit</button>
+              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`, ${itemDurationSec})" class="text-neutral-600 hover:text-black font-medium">Edit</button>
               <button onclick="deleteItem('${item.id}')" class="text-red-600 hover:text-red-700 font-medium">Hapus</button>
             </div>
           </div>
@@ -411,7 +549,7 @@ btnCopySyuting.addEventListener("click", async () => {
   }
 
   const formattedText = currentSyutingItems
-    .map((item, index) => `${index + 1}. ${item.caption}`)
+    .map((item, index) => `${index + 1}. [${formatDurationText(item.duration || 0)}] ${item.caption}`)
     .join("\n\n");
 
   try {
@@ -448,12 +586,16 @@ btnActionConfirm.addEventListener("click", async () => {
   confirmModal.classList.add("hidden");
   
   try {
+    const ytCalc = calculateYtEditDuration(currentSyutingItems);
+
     const historyData = {
       channel: activeChannel,
       completedAt: serverTimestamp(),
       count: currentSyutingItems.length,
+      estimatedYtDuration: ytCalc.formatted,
       videos: currentSyutingItems.map(item => ({
         url: item.url,
+        duration: item.duration || 0,
         caption: item.caption,
         thumbnail: item.thumbnail || "",
         category: item.category || "Lainnya"
@@ -467,7 +609,7 @@ btnActionConfirm.addEventListener("click", async () => {
     hasCopiedSyuting = false;
     updateSelesaiBtnState();
 
-    showCustomAlert("Syuting Selesai! 🎉", `Semua video siap syuting untuk ${activeChannel === "adinoki" ? "YT Adinoki" : "YT Adinoki Reaction"} telah dipindahkan ke Riwayat.`);
+    showCustomAlert("Syuting Selesai! 🎉", `Semua video siap syuting telah dipindahkan ke Riwayat. Estimasi durasi hasil edit: ${ytCalc.formatted}.`);
   } catch (error) {
     console.error("Gagal memindahkan ke riwayat:", error);
     showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat memindahkan ke riwayat syuting.");
@@ -521,9 +663,10 @@ function renderHistory(historyDocs) {
       <div class="bg-white border border-neutral-200 p-3 rounded-2xl flex gap-3 items-center shadow-sm">
         ${v.thumbnail ? `<img src="${v.thumbnail}" class="w-14 h-18 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200" />` : ''}
         <div class="flex-1 min-w-0 space-y-1">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <span class="text-xs font-bold text-orange-600">#${vIdx + 1}</span>
             <span class="text-xs bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-md border border-neutral-200 font-semibold">🏷️ ${v.category || "Lainnya"}</span>
+            <span class="text-xs bg-neutral-900 text-white px-2 py-0.5 rounded-md font-bold">⏱️ ${formatDurationText(v.duration || 0)}</span>
           </div>
           <p class="text-xs text-neutral-800 line-clamp-2 font-medium">${escapeHtml(v.caption)}</p>
           <a href="${v.url}" target="_blank" class="text-xs text-orange-600 hover:underline inline-block font-bold">Buka TikTok ↗</a>
@@ -541,6 +684,7 @@ function renderHistory(historyDocs) {
             <span class="text-sm font-bold text-neutral-800">📅 ${dateStr}</span>
           </div>
           <div class="flex items-center gap-3">
+            <span class="text-xs text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200">⏱️ Est. YT: ${session.estimatedYtDuration || '-'}</span>
             <span class="text-xs text-neutral-500 font-semibold">Total: ${session.count || session.videos?.length || 0} Video</span>
             <button onclick="deleteHistorySession('${session.id}')" class="text-xs text-red-600 hover:text-red-700 font-bold">Hapus Sesi</button>
           </div>
@@ -583,10 +727,11 @@ window.toggleCaption = (id) => {
 };
 
 // 11. MODAL EDIT CONTROL
-window.openEditModal = (id, currentCaption, currentCategory) => {
+window.openEditModal = (id, currentCaption, currentCategory, currentDurationSec) => {
   activeEditId = id;
   modalCaptionInput.value = currentCaption;
   modalCategoryInput.value = currentCategory || "Lainnya";
+  modalDurationInput.value = secondsToFormatInput(currentDurationSec);
   editModal.classList.remove("hidden");
 };
 
@@ -602,12 +747,19 @@ btnSaveEdit.addEventListener("click", async () => {
   if (!activeEditId) return;
   const newCaption = modalCaptionInput.value.trim();
   const newCategory = modalCategoryInput.value.trim() || "Lainnya";
+  const rawDuration = modalDurationInput.value.trim();
+  const parsedSeconds = parseDurationToSeconds(rawDuration);
+
+  if (!rawDuration || parsedSeconds <= 0) {
+    return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid! Contoh: 45 atau 1.25");
+  }
 
   try {
     const docRef = doc(db, "videos", activeEditId);
     await updateDoc(docRef, { 
       caption: newCaption,
-      category: newCategory
+      category: newCategory,
+      duration: parsedSeconds
     });
     closeModal();
   } catch (error) {
@@ -648,11 +800,6 @@ window.deleteItem = async (id) => {
   }
 };
 
-window.moveOrder = async (id, newIndex) => {
-  const docRef = doc(db, "videos", id);
-  await updateDoc(docRef, { order: newIndex });
-};
-
 function escapeHtml(str) {
   if (!str) return "";
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -660,5 +807,9 @@ function escapeHtml(str) {
 
 function escapeModalText(str) {
   if (!str) return "";
-  return str.replace(/`/g, "\\`").replace(/\$/g, "\\$");
+  return str
+    .replace(/\\/g, "\\\\")
+    .replace(/`/g, "\\`")
+    .replace(/\$/g, "\\$")
+    .replace(/\n/g, "\\n");
 }
