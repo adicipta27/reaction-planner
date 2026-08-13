@@ -29,7 +29,7 @@ const db = getFirestore(app);
 const videosRef = collection(db, "videos");
 const historyRef = collection(db, "history");
 
-// State Channel Aktif ('adinoki' / 'reaction')
+// State Channel
 let activeChannel = "adinoki"; 
 
 // Elemen Tab Channel
@@ -38,7 +38,7 @@ const tabReaction = document.getElementById("tabReaction");
 const activeChannelBadge = document.getElementById("activeChannelBadge");
 const historySubTitle = document.getElementById("historySubTitle");
 
-// Elemen DOM Utama
+// Elemen DOM
 const tiktokUrlInput = document.getElementById("tiktokUrl");
 const btnPaste = document.getElementById("btnPaste");
 const tiktokDurationInput = document.getElementById("tiktokDuration");
@@ -53,10 +53,34 @@ const countBank = document.getElementById("countBank");
 const btnCopySyuting = document.getElementById("btnCopySyuting");
 const btnSelesaiSyuting = document.getElementById("btnSelesaiSyuting");
 const categoryTabs = document.getElementById("categoryTabs");
+const btnScrollLeft = document.getElementById("btnScrollLeft");
+const btnScrollRight = document.getElementById("btnScrollRight");
 const totalYtDuration = document.getElementById("totalYtDuration");
 const badgeTikTokSum = document.getElementById("badgeTikTokSum");
 
-// Elemen Modal Edit
+// FITUR TEKAN ENTER UNTUK SIMPAN otomatis
+[tiktokUrlInput, tiktokDurationInput, tiktokCategoryInput, tiktokCaptionInput].forEach(input => {
+  if (input) {
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault(); // Mencegah form submit/refresh halaman
+        btnSave.click();     // Memicu tombol Simpan ke Bank Video
+      }
+    });
+  }
+});
+
+// Event Listener Tombol Scroll Kategori (Panah Kiri / Kanan)
+if (btnScrollLeft && btnScrollRight && categoryTabs) {
+  btnScrollLeft.addEventListener("click", () => {
+    categoryTabs.scrollBy({ left: -220, behavior: "smooth" });
+  });
+  btnScrollRight.addEventListener("click", () => {
+    categoryTabs.scrollBy({ left: 220, behavior: "smooth" });
+  });
+}
+
+// Modal Elements
 const editModal = document.getElementById("editModal");
 const modalCaptionInput = document.getElementById("modalCaptionInput");
 const modalCategoryInput = document.getElementById("modalCategoryInput");
@@ -65,18 +89,15 @@ const btnCancelEdit = document.getElementById("btnCancelEdit");
 const btnCloseModalX = document.getElementById("btnCloseModalX");
 const btnSaveEdit = document.getElementById("btnSaveEdit");
 
-// Elemen Custom Alert Modal
 const customAlertModal = document.getElementById("customAlertModal");
 const customAlertTitle = document.getElementById("customAlertTitle");
 const customAlertMessage = document.getElementById("customAlertMessage");
 const btnCloseCustomAlert = document.getElementById("btnCloseCustomAlert");
 
-// Elemen Confirm Modal
 const confirmModal = document.getElementById("confirmModal");
 const btnCancelConfirm = document.getElementById("btnCancelConfirm");
 const btnActionConfirm = document.getElementById("btnActionConfirm");
 
-// Elemen History Modal
 const historyModal = document.getElementById("historyModal");
 const btnOpenHistory = document.getElementById("btnOpenHistory");
 const btnCloseHistoryModal = document.getElementById("btnCloseHistoryModal");
@@ -86,24 +107,29 @@ let allRawVideos = [];
 let allRawHistory = [];
 let activeEditId = null;
 let currentThumbnail = "";
+let currentAuthor = ""; 
 let currentSyutingItems = [];
 let currentBankItems = [];
 let selectedCategory = "Semua";
 let hasCopiedSyuting = false;
 
-// ==================== DRAG & DROP (SORTABLE.JS) ==================== //
+function extractUsernameFromUrl(url) {
+  if (!url) return "Akun TikTok";
+  const match = url.match(/@([a-zA-Z0-9_\.]+)/);
+  return match ? `@${match[1]}` : "Akun TikTok";
+}
+
+// DRAG & DROP
 Sortable.create(listSyuting, {
   animation: 200,
   handle: ".drag-handle",
   ghostClass: "opacity-40",
   onEnd: async () => {
     const cardElements = listSyuting.querySelectorAll("[data-id]");
-    
     const updatePromises = Array.from(cardElements).map((el, newIndex) => {
       const docId = el.getAttribute("data-id");
       return updateDoc(doc(db, "videos", docId), { order: newIndex });
     });
-
     try {
       await Promise.all(updatePromises);
     } catch (err) {
@@ -113,13 +139,9 @@ Sortable.create(listSyuting, {
   }
 });
 
-// ==================== HELPER KONVERSI DURASI ==================== //
-
-// Mengubah input fleksibel (contoh: "1.25", "1:25", "45") menjadi total detik
 function parseDurationToSeconds(val) {
   if (!val) return 0;
   const str = String(val).trim().replace(',', '.');
-  
   if (str.includes('.') || str.includes(':')) {
     const parts = str.split(/[\.:]/);
     const minutes = parseInt(parts[0], 10) || 0;
@@ -128,11 +150,9 @@ function parseDurationToSeconds(val) {
     const seconds = parseInt(secStr, 10) || 0;
     return (minutes * 60) + seconds;
   }
-  
   return parseInt(str, 10) || 0;
 }
 
-// Format detik ke teks tampilan rapi (contoh: 85 -> "1m 25s", 45 -> "45s")
 function formatDurationText(totalSec) {
   if (!totalSec || totalSec <= 0) return "0s";
   if (totalSec < 60) return `${totalSec}s`;
@@ -141,7 +161,6 @@ function formatDurationText(totalSec) {
   return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }
 
-// Format detik ke format input edit (contoh: 85 -> "1.25", 45 -> "45")
 function secondsToFormatInput(totalSec) {
   if (!totalSec || totalSec <= 0) return "";
   if (totalSec < 60) return String(totalSec);
@@ -151,9 +170,6 @@ function secondsToFormatInput(totalSec) {
   return `${mins}.${secsFormatted}`;
 }
 
-// =============================================================== //
-
-// SOUND EFFECT ALERT
 function playAlertSound() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -194,7 +210,6 @@ btnCloseCustomAlert.addEventListener("click", () => {
   customAlertModal.classList.add("hidden");
 });
 
-// EVENT LISTENER TAB SWITCHER CHANNEL
 tabAdinoki.addEventListener("click", () => switchChannel("adinoki"));
 tabReaction.addEventListener("click", () => switchChannel("reaction"));
 
@@ -204,14 +219,14 @@ function switchChannel(channel) {
   selectedCategory = "Semua";
 
   if (activeChannel === "adinoki") {
-    tabAdinoki.className = "px-6 py-3.5 font-bold border-b-2 border-orange-600 text-orange-600 bg-orange-50/80 rounded-t-xl flex items-center gap-2 transition-all text-base shadow-sm";
-    tabReaction.className = "px-6 py-3.5 font-semibold text-neutral-500 border-b-2 border-transparent hover:text-neutral-800 hover:bg-neutral-100 rounded-t-xl flex items-center gap-2 transition-all text-base";
-    activeChannelBadge.innerText = "Target: YT Adinoki";
+    tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all";
+    tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all";
+    activeChannelBadge.innerText = "TARGET: YT ADINOKI";
     historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki";
   } else {
-    tabReaction.className = "px-6 py-3.5 font-bold border-b-2 border-orange-600 text-orange-600 bg-orange-50/80 rounded-t-xl flex items-center gap-2 transition-all text-base shadow-sm";
-    tabAdinoki.className = "px-6 py-3.5 font-semibold text-neutral-500 border-b-2 border-transparent hover:text-neutral-800 hover:bg-neutral-100 rounded-t-xl flex items-center gap-2 transition-all text-base";
-    activeChannelBadge.innerText = "Target: YT Adinoki Reaction";
+    tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all";
+    tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all";
+    activeChannelBadge.innerText = "TARGET: YT ADINOKI REACTION";
     historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki Reaction";
   }
 
@@ -222,14 +237,13 @@ function switchChannel(channel) {
 function updateSelesaiBtnState() {
   if (hasCopiedSyuting && currentSyutingItems.length > 0) {
     btnSelesaiSyuting.disabled = false;
-    btnSelesaiSyuting.className = "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border border-emerald-500/40 text-xs px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/20 active:scale-95 opacity-100";
+    btnSelesaiSyuting.className = "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border border-emerald-500/40 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 opacity-100";
   } else {
     btnSelesaiSyuting.disabled = true;
-    btnSelesaiSyuting.className = "bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs px-3.5 py-2 rounded-xl font-semibold transition-all flex items-center gap-1.5 opacity-60 cursor-not-allowed";
+    btnSelesaiSyuting.className = "bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-semibold transition-all flex items-center gap-1 opacity-60 cursor-not-allowed";
   }
 }
 
-// FITUR PASTE DARI CLIPBOARD
 if (btnPaste) {
   btnPaste.addEventListener("click", async () => {
     try {
@@ -249,7 +263,6 @@ if (btnPaste) {
   });
 }
 
-// 1. AMBIL CAPTION & THUMBNAIL TIKTOK
 btnFetch.addEventListener("click", async () => {
   const url = tiktokUrlInput.value.trim();
   if (!url) return showCustomAlert("Input Kosong!", "Masukkan link TikTok terlebih dahulu!");
@@ -264,7 +277,9 @@ btnFetch.addEventListener("click", async () => {
     const data = await response.json();
     tiktokCaptionInput.value = data.title || "Gagal mendapatkan caption otomatis.";
     currentThumbnail = data.thumbnail_url || "";
+    currentAuthor = data.author_name ? `@${data.author_name}` : extractUsernameFromUrl(url);
   } catch (error) {
+    currentAuthor = extractUsernameFromUrl(url);
     showCustomAlert("Gagal Ambil Data", "Gagal mengambil data otomatis. Kamu tetap bisa mengetik caption manual di bawah.");
   } finally {
     btnFetch.innerText = "Ambil Caption & Thumbnail";
@@ -272,7 +287,6 @@ btnFetch.addEventListener("click", async () => {
   }
 });
 
-// 2. SIMPAN KE BANK VIDEO
 btnSave.addEventListener("click", async () => {
   const url = tiktokUrlInput.value.trim();
   const rawDuration = tiktokDurationInput.value.trim();
@@ -286,6 +300,7 @@ btnSave.addEventListener("click", async () => {
   }
 
   let thumbnailToSave = currentThumbnail;
+  let authorToSave = currentAuthor || extractUsernameFromUrl(url);
 
   if (!thumbnailToSave) {
     try {
@@ -293,6 +308,7 @@ btnSave.addEventListener("click", async () => {
       if (response.ok) {
         const data = await response.json();
         thumbnailToSave = data.thumbnail_url || "";
+        if (data.author_name) authorToSave = `@${data.author_name}`;
         if (!caption) tiktokCaptionInput.value = data.title || "Tanpa caption";
       }
     } catch (e) {
@@ -309,6 +325,7 @@ btnSave.addEventListener("click", async () => {
       duration: parsedSeconds,
       caption: finalCaption,
       thumbnail: thumbnailToSave,
+      author: authorToSave,
       category: manualCategory,
       status: "bank",
       order: 999,
@@ -320,13 +337,13 @@ btnSave.addEventListener("click", async () => {
     tiktokCaptionInput.value = "";
     tiktokCategoryInput.value = "";
     currentThumbnail = "";
+    currentAuthor = "";
   } catch (error) {
     console.error("Gagal menyimpan data:", error);
     showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat menyimpan data ke Firebase.");
   }
 });
 
-// 3. READ REALTIME VIDEO
 const q = query(videosRef, orderBy("createdAt", "desc"));
 onSnapshot(q, (snapshot) => {
   allRawVideos = [];
@@ -337,7 +354,6 @@ onSnapshot(q, (snapshot) => {
   renderApp(allRawVideos);
 });
 
-// FUNSI HITUNG TOTAL ESTIMASI HASIL EDIT YOUTUBE
 function calculateYtEditDuration(items) {
   if (!items || items.length === 0) {
     return { formatted: "0 Menit 0 Detik", tiktokSumFormatted: "0s" };
@@ -363,7 +379,7 @@ function calculateYtEditDuration(items) {
   };
 }
 
-// 4. RENDER APLIKASI
+// RENDER UTAMA
 function renderApp(items) {
   const channelFilteredItems = items.filter(item => 
     item.channel === activeChannel || (!item.channel && activeChannel === "adinoki")
@@ -380,65 +396,70 @@ function renderApp(items) {
 
   const ytCalc = calculateYtEditDuration(currentSyutingItems);
   totalYtDuration.innerText = ytCalc.formatted;
-  badgeTikTokSum.innerText = `Total Bahan: ${ytCalc.tiktokSumFormatted}`;
+  badgeTikTokSum.innerText = `TOTAL BAHAN: ${ytCalc.tiktokSumFormatted.toUpperCase()}`;
 
   if (currentSyutingItems.length === 0) {
     hasCopiedSyuting = false;
   }
   updateSelesaiBtnState();
 
-  // Render Daftar Siap Syuting
+  // RENDER SIAP SYUTING
   listSyuting.innerHTML = currentSyutingItems.map((item, index) => {
     const imgHtml = item.thumbnail 
-      ? `<img src="${item.thumbnail}" alt="Thumbnail" class="w-32 sm:w-36 h-48 sm:h-52 object-cover rounded-2xl flex-shrink-0 bg-neutral-100 border border-neutral-200 shadow-sm" />`
-      : `<div class="w-32 sm:w-36 h-48 sm:h-52 bg-neutral-100 rounded-2xl flex items-center justify-center text-xs text-neutral-400 flex-shrink-0 border border-neutral-200">Tidak Ada Gambar</div>`;
+      ? `<img src="${item.thumbnail}" alt="Thumbnail" class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200 shadow-2xs" />`
+      : `<div class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 bg-neutral-100 rounded-xl flex items-center justify-center text-xs text-neutral-400 flex-shrink-0 border border-neutral-200 text-center p-2">Tidak Ada Gambar</div>`;
 
     const isLongText = item.caption && item.caption.length > 120;
     const seeMoreBtn = isLongText 
-      ? `<button id="btn-caption-${item.id}" onclick="toggleCaption('${item.id}')" class="text-xs text-orange-600 hover:text-orange-700 font-semibold mt-1 inline-block focus:outline-none">Lihat Selengkapnya</button>` 
+      ? `<button id="btn-caption-${item.id}" onclick="toggleCaption('${item.id}')" class="text-xs text-orange-600 hover:text-orange-700 font-bold mt-1 inline-block focus:outline-none">Lihat Selengkapnya</button>` 
       : '';
 
     const categoryTag = item.category || "Lainnya";
+    const authorTag = item.author || extractUsernameFromUrl(item.url);
     const itemDurationSec = item.duration || 0;
     const itemDurationFormatted = formatDurationText(itemDurationSec);
 
     return `
-      <div data-id="${item.id}" class="bg-neutral-50 border border-orange-200/90 hover:border-orange-400 transition-all p-4 rounded-2xl flex gap-4 items-start shadow-sm relative group">
+      <div data-id="${item.id}" class="bg-white border border-neutral-200/90 hover:border-orange-300 transition-all p-4 rounded-2xl flex flex-row gap-4 items-start shadow-2xs w-full min-w-0 box-border">
         ${imgHtml}
-        <div class="flex-1 space-y-3 min-w-0">
-          <div class="flex items-center justify-between gap-2 flex-wrap">
-            <div class="flex items-center gap-2 flex-wrap">
-              <!-- Handle Drag & Drop -->
-              <div class="drag-handle cursor-grab active:cursor-grabbing text-neutral-400 hover:text-orange-600 px-2 py-0.5 rounded border border-neutral-200 bg-white text-xs font-bold transition-colors select-none flex items-center gap-1 shadow-xs" title="Geser untuk mengatur urutan">
-                <span>⋮⋮</span>
-                <span class="text-[10px] text-neutral-500 font-normal">Geser</span>
-              </div>
-              <span class="bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-sm">
-                #${index + 1}
-              </span>
-              <span class="bg-red-50 text-red-600 text-xs px-2.5 py-1 rounded-lg border border-red-200 font-semibold">
-                🏷️ ${categoryTag}
-              </span>
-              <span class="bg-neutral-900 text-white text-xs px-2.5 py-1 rounded-lg font-bold shadow-sm">
-                ⏱️ ${itemDurationFormatted}
-              </span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <button onclick="toggleStatus('${item.id}', 'bank')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs px-2.5 py-1 rounded-lg ml-1 font-semibold transition-all">Kembalikan</button>
-            </div>
-          </div>
+        <div class="flex-1 space-y-2.5 min-w-0 flex flex-col justify-between self-stretch">
           
-          <div>
-            <p id="caption-${item.id}" class="text-sm font-medium text-neutral-900 leading-relaxed line-clamp-4 transition-all">
+          <div class="space-y-2 w-full min-w-0">
+            <div class="flex flex-wrap items-center justify-between gap-1.5 w-full min-w-0">
+              <div class="flex flex-wrap items-center gap-1.5 min-w-0">
+                <div class="drag-handle cursor-grab active:cursor-grabbing text-neutral-400 hover:text-orange-600 px-1.5 py-0.5 rounded border border-neutral-200 bg-white text-xs font-bold transition-colors flex items-center gap-1" title="Geser urutan">
+                  <span>⋮⋮</span>
+                  <span class="text-[10px] text-neutral-500 font-normal">Geser</span>
+                </div>
+                <span class="bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-black px-2 py-0.5 rounded-full shadow-2xs">
+                  #${index + 1}
+                </span>
+                <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-md border border-blue-200/80 font-bold max-w-[100px] sm:max-w-[140px] truncate" title="${escapeHtml(authorTag)}">
+                  👤 ${escapeHtml(authorTag)}
+                </span>
+                <span class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded-md border border-red-200 font-semibold max-w-[80px] sm:max-w-[110px] truncate">
+                  🏷️ ${escapeHtml(categoryTag)}
+                </span>
+                <span class="bg-neutral-900 text-white text-xs px-2 py-0.5 rounded-md font-bold whitespace-nowrap">
+                  ⏱️ ${itemDurationFormatted}
+                </span>
+              </div>
+
+              <button onclick="toggleStatus('${item.id}', 'bank')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-md font-bold transition-all whitespace-nowrap ml-auto">
+                Kembalikan
+              </button>
+            </div>
+            
+            <p id="caption-${item.id}" class="text-xs sm:text-sm font-bold text-neutral-800 leading-snug sm:leading-relaxed line-clamp-3 sm:line-clamp-4 break-words">
               ${escapeHtml(item.caption)}
             </p>
             ${seeMoreBtn}
           </div>
           
-          <div class="flex justify-between items-center text-xs pt-2 border-t border-neutral-200">
-            <a href="${item.url}" target="_blank" class="text-orange-600 hover:text-orange-700 font-bold text-sm">Buka TikTok ↗</a>
-            <div class="space-x-3 text-sm">
-              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`, ${itemDurationSec})" class="text-neutral-600 hover:text-black font-semibold">Edit</button>
+          <div class="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-neutral-100 w-full min-w-0 mt-auto">
+            <a href="${item.url}" target="_blank" class="text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1">Buka TikTok ↗</a>
+            <div class="space-x-2">
+              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`, ${itemDurationSec})" class="text-neutral-500 hover:text-neutral-900 font-semibold">Edit</button>
             </div>
           </div>
         </div>
@@ -449,7 +470,7 @@ function renderApp(items) {
   renderBankList();
 }
 
-// 5. RENDER BANK VIDEO
+// RENDER BANK VIDEO
 function renderBankList() {
   const rawCategories = currentBankItems.map(i => i.category || "Lainnya");
   const uniqueCategories = Array.from(new Set(rawCategories)).filter(Boolean);
@@ -462,8 +483,8 @@ function renderBankList() {
   categoryTabs.innerHTML = categoriesInBank.map(cat => {
     const isActive = cat === selectedCategory;
     const activeClass = isActive 
-      ? "bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold shadow-md shadow-orange-500/20" 
-      : "bg-neutral-100 text-neutral-600 hover:text-neutral-900 border border-neutral-200";
+      ? "bg-gradient-to-r from-orange-500 to-red-600 text-white font-black shadow-xs" 
+      : "bg-neutral-100 text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 font-medium";
 
     const count = cat === "Semua" 
       ? currentBankItems.length 
@@ -472,7 +493,7 @@ function renderBankList() {
     return `
       <button 
         onclick="filterCategory('${cat}')" 
-        class="px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all ${activeClass}"
+        class="px-3.5 py-2 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all ${activeClass}"
       >
         ${cat} <span class="${isActive ? 'text-white/90' : 'text-neutral-400'} font-normal ml-0.5">(${count})</span>
       </button>
@@ -484,50 +505,55 @@ function renderBankList() {
     : currentBankItems.filter(i => (i.category || "Lainnya") === selectedCategory);
 
   if (filteredBank.length === 0) {
-    listBank.innerHTML = `<p class="text-neutral-400 text-sm text-center py-12">Tidak ada video di kategori <strong>${selectedCategory}</strong></p>`;
+    listBank.innerHTML = `<p class="text-neutral-400 text-sm text-center py-10">Tidak ada video di kategori <strong>${selectedCategory}</strong></p>`;
     return;
   }
 
   listBank.innerHTML = filteredBank.map((item) => {
     const imgHtml = item.thumbnail 
-      ? `<img src="${item.thumbnail}" alt="Thumbnail" class="w-32 sm:w-36 h-48 sm:h-52 object-cover rounded-2xl flex-shrink-0 bg-neutral-100 border border-neutral-200 shadow-sm" />`
-      : `<div class="w-32 sm:w-36 h-48 sm:h-52 bg-neutral-100 rounded-2xl flex items-center justify-center text-xs text-neutral-400 flex-shrink-0 border border-neutral-200">Tidak Ada Gambar</div>`;
+      ? `<img src="${item.thumbnail}" alt="Thumbnail" class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200 shadow-2xs" />`
+      : `<div class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 bg-neutral-100 rounded-xl flex items-center justify-center text-xs text-neutral-400 flex-shrink-0 border border-neutral-200 text-center p-2">Tidak Ada Gambar</div>`;
 
     const isLongText = item.caption && item.caption.length > 120;
     const seeMoreBtn = isLongText 
-      ? `<button id="btn-caption-${item.id}" onclick="toggleCaption('${item.id}')" class="text-xs text-orange-600 hover:text-orange-700 font-semibold mt-1 inline-block focus:outline-none">Lihat Selengkapnya</button>` 
+      ? `<button id="btn-caption-${item.id}" onclick="toggleCaption('${item.id}')" class="text-xs text-orange-600 hover:text-orange-700 font-bold mt-1 inline-block focus:outline-none">Lihat Selengkapnya</button>` 
       : '';
 
     const categoryTag = item.category || "Lainnya";
+    const authorTag = item.author || extractUsernameFromUrl(item.url);
     const itemDurationSec = item.duration || 0;
     const itemDurationFormatted = formatDurationText(itemDurationSec);
 
     return `
-      <div class="bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition-all p-4 rounded-2xl flex gap-4 items-start shadow-sm">
+      <div class="bg-white border border-neutral-200/90 hover:border-neutral-300 transition-all p-4 rounded-2xl flex flex-row gap-4 items-start shadow-2xs w-full min-w-0 box-border">
         ${imgHtml}
-        <div class="flex-1 space-y-3 min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="bg-neutral-200 text-neutral-800 text-xs px-2.5 py-1 rounded-lg border border-neutral-300 font-semibold">
-              🏷️ ${categoryTag}
-            </span>
-            <span class="bg-neutral-900 text-white text-xs px-2.5 py-1 rounded-lg font-bold shadow-sm">
-              ⏱️ ${itemDurationFormatted}
-            </span>
-          </div>
+        <div class="flex-1 space-y-2.5 min-w-0 flex flex-col justify-between self-stretch">
+          
+          <div class="space-y-2 w-full min-w-0">
+            <div class="flex flex-wrap items-center gap-1.5 w-full min-w-0">
+              <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-md border border-blue-200/80 font-bold max-w-[100px] sm:max-w-[140px] truncate" title="${escapeHtml(authorTag)}">
+                👤 ${escapeHtml(authorTag)}
+              </span>
+              <span class="bg-neutral-100 text-neutral-700 text-xs px-2 py-0.5 rounded-md border border-neutral-200 font-semibold max-w-[80px] sm:max-w-[110px] truncate">
+                🏷️ ${escapeHtml(categoryTag)}
+              </span>
+              <span class="bg-neutral-900 text-white text-xs px-2 py-0.5 rounded-md font-bold whitespace-nowrap">
+                ⏱️ ${itemDurationFormatted}
+              </span>
+            </div>
 
-          <div>
-            <p id="caption-${item.id}" class="text-sm text-neutral-800 leading-relaxed line-clamp-4 transition-all font-medium">
+            <p id="caption-${item.id}" class="text-xs sm:text-sm font-bold text-neutral-800 leading-snug sm:leading-relaxed line-clamp-3 sm:line-clamp-4 break-words">
               ${escapeHtml(item.caption)}
             </p>
             ${seeMoreBtn}
           </div>
 
-          <div class="flex justify-between items-center text-xs pt-2 border-t border-neutral-200">
-            <a href="${item.url}" target="_blank" class="text-neutral-600 hover:text-black font-semibold text-sm">Buka TikTok ↗</a>
-            <div class="space-x-3 text-sm flex items-center">
-              <button onclick="toggleStatus('${item.id}', 'syuting')" class="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-all">+ Pilih Syuting</button>
-              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`, ${itemDurationSec})" class="text-neutral-600 hover:text-black font-medium">Edit</button>
-              <button onclick="deleteItem('${item.id}')" class="text-red-600 hover:text-red-700 font-medium">Hapus</button>
+          <div class="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-neutral-100 w-full min-w-0 mt-auto flex-wrap gap-2">
+            <a href="${item.url}" target="_blank" class="text-neutral-700 hover:text-black font-bold">Buka TikTok ↗</a>
+            <div class="space-x-2 flex items-center ml-auto">
+              <button onclick="toggleStatus('${item.id}', 'syuting')" class="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs active:scale-95 transition-all">+ Pilih Syuting</button>
+              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`, ${itemDurationSec})" class="text-neutral-500 hover:text-neutral-900 font-semibold">Edit</button>
+              <button onclick="deleteItem('${item.id}')" class="text-red-600 hover:text-red-700 font-semibold">Hapus</button>
             </div>
           </div>
         </div>
@@ -536,30 +562,30 @@ function renderBankList() {
   }).join("");
 }
 
-// 6. GANTI KATEGORI
 window.filterCategory = (category) => {
   selectedCategory = category;
   renderBankList();
 };
 
-// 7. FITUR COPY POIN VIDEO SYUTING
 btnCopySyuting.addEventListener("click", async () => {
   if (!currentSyutingItems || currentSyutingItems.length === 0) {
     return showCustomAlert("Daftar Syuting Kosong", "Belum ada video di daftar Siap Syuting untuk disalin.");
   }
 
   const formattedText = currentSyutingItems
-    .map((item, index) => `${index + 1}. [${formatDurationText(item.duration || 0)}] ${item.caption}`)
+    .map((item, index) => {
+      const authorStr = item.author || extractUsernameFromUrl(item.url);
+      return `${index + 1}. [${authorStr}] [${formatDurationText(item.duration || 0)}] ${item.caption}`;
+    })
     .join("\n\n");
 
   try {
     await navigator.clipboard.writeText(formattedText);
-    
     hasCopiedSyuting = true;
     updateSelesaiBtnState();
 
     const originalText = btnCopySyuting.innerHTML;
-    btnCopySyuting.innerHTML = "✅ Berhasil Disalin!";
+    btnCopySyuting.innerHTML = "✅ Disalin!";
     btnCopySyuting.classList.add("bg-emerald-50", "text-emerald-600", "border-emerald-300");
 
     setTimeout(() => {
@@ -572,7 +598,6 @@ btnCopySyuting.addEventListener("click", async () => {
   }
 });
 
-// 8. FITUR SELESAI SYUTING
 btnSelesaiSyuting.addEventListener("click", () => {
   if (!hasCopiedSyuting) return;
   confirmModal.classList.remove("hidden");
@@ -584,10 +609,8 @@ btnCancelConfirm.addEventListener("click", () => {
 
 btnActionConfirm.addEventListener("click", async () => {
   confirmModal.classList.add("hidden");
-  
   try {
     const ytCalc = calculateYtEditDuration(currentSyutingItems);
-
     const historyData = {
       channel: activeChannel,
       completedAt: serverTimestamp(),
@@ -597,15 +620,14 @@ btnActionConfirm.addEventListener("click", async () => {
         url: item.url,
         duration: item.duration || 0,
         caption: item.caption,
+        author: item.author || extractUsernameFromUrl(item.url),
         thumbnail: item.thumbnail || "",
         category: item.category || "Lainnya"
       }))
     };
 
     await addDoc(historyRef, historyData);
-
     await Promise.all(currentSyutingItems.map(item => deleteDoc(doc(db, "videos", item.id))));
-    
     hasCopiedSyuting = false;
     updateSelesaiBtnState();
 
@@ -616,7 +638,6 @@ btnActionConfirm.addEventListener("click", async () => {
   }
 });
 
-// 9. FITUR POPUP RIWAYAT SYUTING
 btnOpenHistory.addEventListener("click", () => {
   historyModal.classList.remove("hidden");
 });
@@ -660,33 +681,33 @@ function renderHistory(historyDocs) {
     }
 
     const videosHtml = (session.videos || []).map((v, vIdx) => `
-      <div class="bg-white border border-neutral-200 p-3 rounded-2xl flex gap-3 items-center shadow-sm">
-        ${v.thumbnail ? `<img src="${v.thumbnail}" class="w-14 h-18 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200" />` : ''}
+      <div class="bg-white border border-neutral-200 p-3.5 rounded-2xl flex gap-3 items-center shadow-2xs w-full min-w-0">
+        ${v.thumbnail ? `<img src="${v.thumbnail}" class="w-14 h-20 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200" />` : ''}
         <div class="flex-1 min-w-0 space-y-1">
-          <div class="flex items-center gap-2 flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-xs font-bold text-orange-600">#${vIdx + 1}</span>
-            <span class="text-xs bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-md border border-neutral-200 font-semibold">🏷️ ${v.category || "Lainnya"}</span>
-            <span class="text-xs bg-neutral-900 text-white px-2 py-0.5 rounded-md font-bold">⏱️ ${formatDurationText(v.duration || 0)}</span>
+            <span class="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-bold max-w-[100px] truncate">👤 ${v.author || "Akun"}</span>
+            <span class="text-xs bg-neutral-100 text-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200 font-semibold truncate max-w-[80px]">🏷️ ${v.category || "Lainnya"}</span>
+            <span class="text-xs bg-neutral-900 text-white px-1.5 py-0.5 rounded font-bold">⏱️ ${formatDurationText(v.duration || 0)}</span>
           </div>
-          <p class="text-xs text-neutral-800 line-clamp-2 font-medium">${escapeHtml(v.caption)}</p>
+          <p class="text-xs sm:text-sm text-neutral-800 line-clamp-2 font-bold break-words">${escapeHtml(v.caption)}</p>
           <a href="${v.url}" target="_blank" class="text-xs text-orange-600 hover:underline inline-block font-bold">Buka TikTok ↗</a>
         </div>
       </div>
     `).join("");
 
     return `
-      <div class="bg-neutral-50 border border-neutral-200 p-5 rounded-2xl space-y-4 shadow-sm">
+      <div class="bg-neutral-50 border border-neutral-200 p-4 sm:p-5 rounded-2xl space-y-3.5 shadow-2xs w-full min-w-0">
         <div class="flex justify-between items-center border-b border-neutral-200 pb-3 flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full">
               Sesi Syuting Selesai
             </span>
-            <span class="text-sm font-bold text-neutral-800">📅 ${dateStr}</span>
+            <span class="text-xs sm:text-sm font-bold text-neutral-800">📅 ${dateStr}</span>
           </div>
-          <div class="flex items-center gap-3">
-            <span class="text-xs text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200">⏱️ Est. YT: ${session.estimatedYtDuration || '-'}</span>
-            <span class="text-xs text-neutral-500 font-semibold">Total: ${session.count || session.videos?.length || 0} Video</span>
-            <button onclick="deleteHistorySession('${session.id}')" class="text-xs text-red-600 hover:text-red-700 font-bold">Hapus Sesi</button>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200">Est. YT: ${session.estimatedYtDuration || '-'}</span>
+            <button onclick="deleteHistorySession('${session.id}')" class="text-xs text-red-600 hover:text-red-700 font-bold ml-2">Hapus</button>
           </div>
         </div>
 
@@ -698,7 +719,6 @@ function renderHistory(historyDocs) {
   }).join("");
 }
 
-// FITUR HAPUS SESI HISTORY
 window.deleteHistorySession = async (historyId) => {
   if (confirm("Yakin ingin menghapus sesi riwayat ini?")) {
     try {
@@ -710,23 +730,20 @@ window.deleteHistorySession = async (historyId) => {
   }
 };
 
-// 10. FITUR TOGGLE CAPTION
 window.toggleCaption = (id) => {
   const captionEl = document.getElementById(`caption-${id}`);
   const btnEl = document.getElementById(`btn-caption-${id}`);
-  
   if (!captionEl || !btnEl) return;
 
-  if (captionEl.classList.contains("line-clamp-4")) {
-    captionEl.classList.remove("line-clamp-4");
+  if (captionEl.classList.contains("line-clamp-3") || captionEl.classList.contains("line-clamp-4")) {
+    captionEl.classList.remove("line-clamp-3", "line-clamp-4");
     btnEl.innerText = "Sembunyikan";
   } else {
-    captionEl.classList.add("line-clamp-4");
+    captionEl.classList.add("line-clamp-3");
     btnEl.innerText = "Lihat Selengkapnya";
   }
 };
 
-// 11. MODAL EDIT CONTROL
 window.openEditModal = (id, currentCaption, currentCategory, currentDurationSec) => {
   activeEditId = id;
   modalCaptionInput.value = currentCaption;
@@ -768,7 +785,6 @@ btnSaveEdit.addEventListener("click", async () => {
   }
 });
 
-// 12. ACTION FUNCTIONS
 window.toggleStatus = async (id, newStatus) => {
   const docRef = doc(db, "videos", id);
 
