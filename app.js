@@ -110,7 +110,11 @@ let currentThumbnail = "";
 let currentAuthor = ""; 
 let currentSyutingItems = [];
 let currentBankItems = [];
+
+// STATE FILTER BANK VIDEO (Kategori vs Akun)
+let filterMode = "category"; // 'category' atau 'account'
 let selectedCategory = "Semua";
+let selectedAccount = "Semua";
 let hasCopiedSyuting = false;
 
 function extractUsernameFromUrl(url) {
@@ -217,6 +221,7 @@ function switchChannel(channel) {
   activeChannel = channel;
   hasCopiedSyuting = false;
   selectedCategory = "Semua";
+  selectedAccount = "Semua";
 
   if (activeChannel === "adinoki") {
     tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all";
@@ -470,42 +475,73 @@ function renderApp(items) {
   renderBankList();
 }
 
-// RENDER BANK VIDEO
+// RENDER BANK VIDEO (Bisa Filter via Kategori atau Akun TikTok)
 function renderBankList() {
-  const rawCategories = currentBankItems.map(i => i.category || "Lainnya");
-  const uniqueCategories = Array.from(new Set(rawCategories)).filter(Boolean);
-  const categoriesInBank = ["Semua", ...uniqueCategories];
+  const categoriesInBank = ["Semua", ...Array.from(new Set(currentBankItems.map(i => i.category || "Lainnya"))).filter(Boolean)];
+  const accountsInBank = ["Semua", ...Array.from(new Set(currentBankItems.map(i => i.author || extractUsernameFromUrl(i.url)))).filter(Boolean)];
 
-  if (!categoriesInBank.includes(selectedCategory)) {
-    selectedCategory = "Semua";
-  }
+  if (!categoriesInBank.includes(selectedCategory)) selectedCategory = "Semua";
+  if (!accountsInBank.includes(selectedAccount)) selectedAccount = "Semua";
 
-  categoryTabs.innerHTML = categoriesInBank.map(cat => {
-    const isActive = cat === selectedCategory;
-    const activeClass = isActive 
+  // Tombol Toggle Mode Switcher (Kategori vs Akun)
+  const modeSwitchHtml = `
+    <div class="flex items-center gap-1 bg-neutral-200/80 p-1 rounded-xl mr-2 flex-shrink-0">
+      <button 
+        onclick="setFilterMode('category')" 
+        class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${filterMode === 'category' ? 'bg-white text-orange-600 shadow-2xs' : 'text-neutral-600 hover:text-black'}"
+      >
+        🏷️ Kategori
+      </button>
+      <button 
+        onclick="setFilterMode('account')" 
+        class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${filterMode === 'account' ? 'bg-white text-orange-600 shadow-2xs' : 'text-neutral-600 hover:text-black'}"
+      >
+        👤 Akun
+      </button>
+    </div>
+  `;
+
+  const activeList = filterMode === "category" ? categoriesInBank : accountsInBank;
+
+  const tabsHtml = activeList.map(item => {
+    const isSelected = filterMode === "category" ? item === selectedCategory : item === selectedAccount;
+    const activeClass = isSelected 
       ? "bg-gradient-to-r from-orange-500 to-red-600 text-white font-black shadow-xs" 
       : "bg-neutral-100 text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 font-medium";
 
-    const count = cat === "Semua" 
-      ? currentBankItems.length 
-      : currentBankItems.filter(i => (i.category || "Lainnya") === cat).length;
+    let count = 0;
+    if (item === "Semua") {
+      count = currentBankItems.length;
+    } else if (filterMode === "category") {
+      count = currentBankItems.filter(i => (i.category || "Lainnya") === item).length;
+    } else {
+      count = currentBankItems.filter(i => (i.author || extractUsernameFromUrl(i.url)) === item).length;
+    }
 
     return `
       <button 
-        onclick="filterCategory('${cat}')" 
+        onclick="filterItem(\`${escapeModalText(item)}\`)" 
         class="px-3.5 py-2 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all ${activeClass}"
       >
-        ${cat} <span class="${isActive ? 'text-white/90' : 'text-neutral-400'} font-normal ml-0.5">(${count})</span>
+        ${escapeHtml(item)} <span class="${isSelected ? 'text-white/90' : 'text-neutral-400'} font-normal ml-0.5">(${count})</span>
       </button>
     `;
   }).join("");
 
-  const filteredBank = selectedCategory === "Semua" 
-    ? currentBankItems 
-    : currentBankItems.filter(i => (i.category || "Lainnya") === selectedCategory);
+  categoryTabs.innerHTML = modeSwitchHtml + tabsHtml;
+
+  // Filter video berdasarkan mode aktif
+  const filteredBank = currentBankItems.filter(i => {
+    if (filterMode === "category") {
+      return selectedCategory === "Semua" || (i.category || "Lainnya") === selectedCategory;
+    } else {
+      return selectedAccount === "Semua" || (i.author || extractUsernameFromUrl(i.url)) === selectedAccount;
+    }
+  });
 
   if (filteredBank.length === 0) {
-    listBank.innerHTML = `<p class="text-neutral-400 text-sm text-center py-10">Tidak ada video di kategori <strong>${selectedCategory}</strong></p>`;
+    const activeLabel = filterMode === "category" ? selectedCategory : selectedAccount;
+    listBank.innerHTML = `<p class="text-neutral-400 text-sm text-center py-10">Tidak ada video di ${filterMode === "category" ? "kategori" : "akun"} <strong>${escapeHtml(activeLabel)}</strong></p>`;
     return;
   }
 
@@ -562,10 +598,21 @@ function renderBankList() {
   }).join("");
 }
 
-window.filterCategory = (category) => {
-  selectedCategory = category;
+window.setFilterMode = (mode) => {
+  filterMode = mode;
   renderBankList();
 };
+
+window.filterItem = (val) => {
+  if (filterMode === "category") {
+    selectedCategory = val;
+  } else {
+    selectedAccount = val;
+  }
+  renderBankList();
+};
+
+window.filterCategory = window.filterItem; // Kompatibilitas mundur
 
 btnCopySyuting.addEventListener("click", async () => {
   if (!currentSyutingItems || currentSyutingItems.length === 0) {
