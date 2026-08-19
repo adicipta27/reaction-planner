@@ -39,17 +39,17 @@
           Kelola link, thumbnail, dan kalkulasi estimasi durasi hasil edit YouTube.
         </p>
       </div>
-      <button id="btnOpenHistory" class="self-start sm:self-center bg-white hover:bg-neutral-50 text-neutral-800 border border-neutral-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl font-bold transition-all shadow-xs flex items-center gap-2">
+      <button id="btnOpenHistory" class="self-start sm:self-center bg-white hover:bg-neutral-50 text-neutral-800 border border-neutral-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer">
         <span>📜</span> Riwayat Syuting
       </button>
     </div>
 
     <!-- TAB CHANNEL SELECTOR -->
     <div class="flex items-center gap-3 border-b border-neutral-200 pb-3">
-      <button id="tabAdinoki" class="px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all">
+      <button id="tabAdinoki" class="px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer">
         <span class="w-2.5 h-2.5 rounded-full bg-orange-600"></span> YT Adinoki
       </button>
-      <button id="tabReaction" class="px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all">
+      <button id="tabReaction" class="px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer">
         <span>⚡</span> YT Adinoki Reaction
       </button>
     </div>
@@ -70,11 +70,11 @@
         <div class="flex flex-col md:flex-row gap-2.5">
           <div class="flex-1 flex gap-2 min-w-0">
             <input type="text" id="tiktokUrl" placeholder="Paste link TikTok di sini..." class="w-full text-xs sm:text-sm px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:border-orange-500 bg-neutral-50/50">
-            <button id="btnPaste" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold px-4 py-3 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all border border-neutral-200 flex items-center gap-1.5">
+            <button id="btnPaste" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold px-4 py-3 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all border border-neutral-200 flex items-center gap-1.5 cursor-pointer">
               📋 Paste
             </button>
           </div>
-          <button id="btnFetch" class="bg-neutral-900 hover:bg-black text-white font-bold px-6 py-3 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all shadow-xs">
+          <button id="btnFetch" class="bg-neutral-900 hover:bg-black text-white font-bold px-6 py-3 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all shadow-xs cursor-pointer">
             Ambil Caption & Thumbnail
           </button>
         </div>
@@ -97,7 +97,7 @@
         </div>
 
         <!-- Baris 3: Tombol Simpan -->
-        <button id="btnSave" class="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-black py-3.5 rounded-xl text-xs sm:text-sm shadow-md shadow-orange-500/20 transition-all uppercase tracking-wider">
+        <button id="btnSave" class="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-black py-3.5 rounded-xl text-xs sm:text-sm shadow-md shadow-orange-500/20 transition-all uppercase tracking-wider cursor-pointer">
           + Simpan ke Bank Video
         </button>
       </div>
@@ -113,7 +113,7 @@
             🎯 Siap Syuting ( <span id="countSyuting">0</span> )
           </h2>
           <div class="flex items-center gap-2">
-            <button id="btnCopySyuting" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all">
+            <button id="btnCopySyuting" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer">
               📋 Copy Poin Video
             </button>
             <button id="btnSelesaiSyuting" disabled class="bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-semibold opacity-60 cursor-not-allowed transition-all">
@@ -121,6 +121,9 @@
             </button>
           </div>
         </div>
+
+        <!-- CONTAINER TAB SESI SYUTING (#1, #2, #3) -->
+        <div id="batchTabsContainer"></div>
 
         <!-- BANNER ESTIMASI YOUTUBE -->
         <div class="bg-neutral-900 text-white p-5 rounded-2xl w-full min-w-0 box-border shadow-md relative overflow-hidden">
@@ -158,7 +161,7 @@
 
         <!-- TAB KATEGORI DENGAN NAVIGASI PANAH SCROLL -->
         <div class="relative flex items-center gap-1.5 w-full min-w-0">
-          <button id="btnScrollLeft" class="flex items-center justify-center w-8 h-8 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-black border border-neutral-200 flex-shrink-0 transition-all text-xs active:scale-90" title="Scroll Kiri">
+          <button id="btnScrollLeft" class="flex items-center justify-center w-8 h-8 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-black border border-neutral-200 flex-shrink-0 transition-all text-xs active:scale-90 cursor-pointer" title="Scroll Kiri">
             ◀
           </button>
           
@@ -166,7 +169,7 @@
             <!-- Render Javascript -->
           </div>
 
-          <button id="btnScrollRight" class="flex items-center justify-center w-8 h-8 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-black border border-neutral-200 flex-shrink-0 transition-all text-xs active:scale-90" title="Scroll Kanan">
+          <button id="btnScrollRight" class="flex items-center justify-center w-8 h-8 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-black border border-neutral-200 flex-shrink-0 transition-all text-xs active:scale-90 cursor-pointer" title="Scroll Kanan">
             ▶
           </button>
         </div>
@@ -186,7 +189,7 @@
     <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl min-w-0">
       <div class="flex justify-between items-center border-b pb-3">
         <h3 class="font-bold text-base sm:text-lg">Edit Data Video</h3>
-        <button id="btnCloseModalX" class="text-neutral-400 hover:text-black text-xl">✕</button>
+        <button id="btnCloseModalX" class="text-neutral-400 hover:text-black text-xl cursor-pointer">✕</button>
       </div>
       <div class="space-y-3 text-xs sm:text-sm">
         <div>
@@ -203,8 +206,8 @@
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button id="btnCancelEdit" class="px-4 py-2 bg-neutral-100 rounded-xl font-bold text-xs sm:text-sm">Batal</button>
-        <button id="btnSaveEdit" class="px-4 py-2 bg-orange-600 text-white rounded-xl font-bold text-xs sm:text-sm">Simpan Perubahan</button>
+        <button id="btnCancelEdit" class="px-4 py-2 bg-neutral-100 rounded-xl font-bold text-xs sm:text-sm cursor-pointer">Batal</button>
+        <button id="btnSaveEdit" class="px-4 py-2 bg-orange-600 text-white rounded-xl font-bold text-xs sm:text-sm cursor-pointer">Simpan Perubahan</button>
       </div>
     </div>
   </div>
@@ -214,7 +217,7 @@
     <div class="bg-white rounded-2xl max-w-sm w-full p-5 text-center space-y-3 shadow-2xl">
       <h3 id="customAlertTitle" class="font-bold text-base sm:text-lg text-neutral-900">Peringatan!</h3>
       <p id="customAlertMessage" class="text-xs sm:text-sm text-neutral-600 leading-relaxed"></p>
-      <button id="btnCloseCustomAlert" class="w-full py-2.5 bg-neutral-900 text-white font-bold rounded-xl text-xs sm:text-sm">Mengerti</button>
+      <button id="btnCloseCustomAlert" class="w-full py-2.5 bg-neutral-900 text-white font-bold rounded-xl text-xs sm:text-sm cursor-pointer">Mengerti</button>
     </div>
   </div>
 
@@ -224,8 +227,8 @@
       <h3 class="font-bold text-base sm:text-lg text-neutral-900">Konfirmasi Selesai</h3>
       <p class="text-xs sm:text-sm text-neutral-600 leading-relaxed">Apakah kamu yakin ingin menyelesaikan sesi syuting ini? Semua video di daftar Siap Syuting akan dipindahkan ke Riwayat.</p>
       <div class="flex gap-2">
-        <button id="btnCancelConfirm" class="w-1/2 py-2.5 bg-neutral-100 font-bold rounded-xl text-xs sm:text-sm text-neutral-700">Batal</button>
-        <button id="btnActionConfirm" class="w-1/2 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs sm:text-sm">Ya, Selesai</button>
+        <button id="btnCancelConfirm" class="w-1/2 py-2.5 bg-neutral-100 font-bold rounded-xl text-xs sm:text-sm text-neutral-700 cursor-pointer">Batal</button>
+        <button id="btnActionConfirm" class="w-1/2 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs sm:text-sm cursor-pointer">Ya, Selesai</button>
       </div>
     </div>
   </div>
@@ -238,7 +241,7 @@
           <h3 class="font-bold text-lg text-neutral-900">Riwayat Syuting</h3>
           <p id="historySubTitle" class="text-xs text-neutral-500">Menampilkan riwayat</p>
         </div>
-        <button id="btnCloseHistoryModal" class="text-neutral-400 hover:text-black text-xl">✕</button>
+        <button id="btnCloseHistoryModal" class="text-neutral-400 hover:text-black text-xl cursor-pointer">✕</button>
       </div>
       <div id="historyList" class="flex-1 overflow-y-auto space-y-4 pr-1">
         <!-- Render Javascript -->
