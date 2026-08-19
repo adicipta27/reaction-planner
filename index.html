@@ -112,8 +112,13 @@
           <h2 class="text-base sm:text-xl font-black text-neutral-900 flex items-center gap-2">
             🎯 Siap Syuting ( <span id="countSyuting">0</span> )
           </h2>
-          <div class="flex items-center gap-2">
-            <button id="btnCopySyuting" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer">
+          <div class="flex items-center gap-2 flex-wrap">
+            <!-- Tombol Trigger Modal Baca Komen -->
+            <button id="btnOpenBacaKomen" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs sm:text-sm px-3 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              💬 Baca Komen
+              <span id="badgeBacaKomenStatus" class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" title="Belum Lengkap"></span>
+            </button>
+            <button id="btnCopySyuting" disabled class="bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold opacity-60 cursor-not-allowed transition-all">
               📋 Copy Poin Video
             </button>
             <button id="btnSelesaiSyuting" disabled class="bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-semibold opacity-60 cursor-not-allowed transition-all">
@@ -182,6 +187,42 @@
 
     </div>
 
+  </div>
+
+  <!-- MODAL BACA KOMEN -->
+  <div id="bacaKomenModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl min-w-0">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="font-bold text-base sm:text-lg text-neutral-900 flex items-center gap-2">
+          <span>💬</span> Pengaturan Baca Komen
+        </h3>
+        <button id="btnCloseBacaKomenModalX" class="text-neutral-400 hover:text-black text-xl cursor-pointer">✕</button>
+      </div>
+      
+      <p class="text-xs text-neutral-500 leading-relaxed">
+        Lengkapi link YouTube dan 2 akun wajib dibacakan. Tombol <strong>Copy Poin Video</strong> hanya dapat diakses jika data ini terisi penuh.
+      </p>
+
+      <div class="space-y-3.5 text-xs sm:text-sm">
+        <div>
+          <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Link Video YouTube *</label>
+          <input type="url" id="bacaKomenYtUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Nama Akun #1 *</label>
+          <input type="text" id="bacaKomenAccount1" placeholder="Masukkan nama akun pertama..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Nama Akun #2 *</label>
+          <input type="text" id="bacaKomenAccount2" placeholder="Masukkan nama akun kedua..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+        <button id="btnCancelBacaKomen" class="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-xl font-bold text-xs sm:text-sm cursor-pointer hover:bg-neutral-200 transition-all">Batal</button>
+        <button id="btnSaveBacaKomen" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs sm:text-sm cursor-pointer transition-all">Simpan Data</button>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL EDIT -->
