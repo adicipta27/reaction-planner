@@ -7,6 +7,7 @@ import {
   doc, 
   updateDoc, 
   deleteDoc, 
+  setDoc,
   query, 
   orderBy, 
   serverTimestamp 
@@ -28,6 +29,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const videosRef = collection(db, "videos");
 const historyRef = collection(db, "history");
+const bacaKomenRef = collection(db, "baca_komen");
 
 // State
 let activeChannel = "adinoki"; 
@@ -58,6 +60,17 @@ const btnScrollLeft = document.getElementById("btnScrollLeft");
 const btnScrollRight = document.getElementById("btnScrollRight");
 const totalYtDuration = document.getElementById("totalYtDuration");
 const badgeTikTokSum = document.getElementById("badgeTikTokSum");
+
+// Elemen DOM Baca Komen Modal
+const btnOpenBacaKomen = document.getElementById("btnOpenBacaKomen");
+const badgeBacaKomenStatus = document.getElementById("badgeBacaKomenStatus");
+const bacaKomenModal = document.getElementById("bacaKomenModal");
+const btnCloseBacaKomenModalX = document.getElementById("btnCloseBacaKomenModalX");
+const btnCancelBacaKomen = document.getElementById("btnCancelBacaKomen");
+const btnSaveBacaKomen = document.getElementById("btnSaveBacaKomen");
+const bacaKomenYtUrl = document.getElementById("bacaKomenYtUrl");
+const bacaKomenAccount1 = document.getElementById("bacaKomenAccount1");
+const bacaKomenAccount2 = document.getElementById("bacaKomenAccount2");
 
 // FITUR TEKAN ENTER UNTUK SIMPAN otomatis
 [tiktokUrlInput, tiktokDurationInput, tiktokCategoryInput, tiktokCaptionInput].forEach(input => {
@@ -106,6 +119,7 @@ const historyList = document.getElementById("historyList");
 
 let allRawVideos = [];
 let allRawHistory = [];
+let allRawBacaKomen = {};
 let activeEditId = null;
 let currentThumbnail = "";
 let currentAuthor = ""; 
@@ -216,6 +230,98 @@ btnCloseCustomAlert.addEventListener("click", () => {
   customAlertModal.classList.add("hidden");
 });
 
+// LOGIKA BACA KOMEN
+function getBacaKomenKey() {
+  return `${activeChannel}_batch_${activeBatch}`;
+}
+
+function getBacaKomenData() {
+  const key = getBacaKomenKey();
+  return allRawBacaKomen[key] || { ytUrl: "", account1: "", account2: "" };
+}
+
+function isBacaKomenComplete() {
+  const data = getBacaKomenData();
+  return Boolean(data.ytUrl?.trim() && data.account1?.trim() && data.account2?.trim());
+}
+
+function updateBacaKomenUI() {
+  const complete = isBacaKomenComplete();
+  if (badgeBacaKomenStatus) {
+    if (complete) {
+      badgeBacaKomenStatus.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block";
+      badgeBacaKomenStatus.title = "Data Lengkap";
+    } else {
+      badgeBacaKomenStatus.className = "w-2.5 h-2.5 rounded-full bg-red-500 inline-block";
+      badgeBacaKomenStatus.title = "Belum Lengkap";
+    }
+  }
+
+  if (btnCopySyuting) {
+    if (currentBatchItems && currentBatchItems.length > 0 && complete) {
+      btnCopySyuting.disabled = false;
+      btnCopySyuting.className = "bg-neutral-900 hover:bg-black text-white border border-neutral-900 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all shadow-xs cursor-pointer";
+    } else {
+      btnCopySyuting.disabled = true;
+      btnCopySyuting.className = "bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold opacity-60 cursor-not-allowed transition-all";
+    }
+  }
+
+  updateSelesaiBtnState();
+}
+
+if (btnOpenBacaKomen) {
+  btnOpenBacaKomen.addEventListener("click", () => {
+    const data = getBacaKomenData();
+    if (bacaKomenYtUrl) bacaKomenYtUrl.value = data.ytUrl || "";
+    if (bacaKomenAccount1) bacaKomenAccount1.value = data.account1 || "";
+    if (bacaKomenAccount2) bacaKomenAccount2.value = data.account2 || "";
+    if (bacaKomenModal) bacaKomenModal.classList.remove("hidden");
+  });
+}
+
+const closeBacaKomenModal = () => {
+  if (bacaKomenModal) bacaKomenModal.classList.add("hidden");
+};
+
+if (btnCloseBacaKomenModalX) btnCloseBacaKomenModalX.addEventListener("click", closeBacaKomenModal);
+if (btnCancelBacaKomen) btnCancelBacaKomen.addEventListener("click", closeBacaKomenModal);
+
+if (btnSaveBacaKomen) {
+  btnSaveBacaKomen.addEventListener("click", async () => {
+    const ytUrl = bacaKomenYtUrl ? bacaKomenYtUrl.value.trim() : "";
+    const account1 = bacaKomenAccount1 ? bacaKomenAccount1.value.trim() : "";
+    const account2 = bacaKomenAccount2 ? bacaKomenAccount2.value.trim() : "";
+
+    if (!ytUrl || !account1 || !account2) {
+      return showCustomAlert("Data Belum Lengkap!", "Harap isi semua kolom: Link YouTube, Nama Akun #1, dan Nama Akun #2.");
+    }
+
+    const key = getBacaKomenKey();
+    try {
+      await setDoc(doc(db, "baca_komen", key), {
+        ytUrl,
+        account1,
+        account2,
+        updatedAt: serverTimestamp()
+      });
+      closeBacaKomenModal();
+    } catch (err) {
+      console.error("Gagal simpan Baca Komen:", err);
+      showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat menyimpan data ke Firestore.");
+    }
+  });
+}
+
+// REALTIME LISTENER BACA KOMEN
+onSnapshot(bacaKomenRef, (snapshot) => {
+  allRawBacaKomen = {};
+  snapshot.forEach((doc) => {
+    allRawBacaKomen[doc.id] = doc.data();
+  });
+  updateBacaKomenUI();
+});
+
 tabAdinoki.addEventListener("click", () => switchChannel("adinoki"));
 tabReaction.addEventListener("click", () => switchChannel("reaction"));
 
@@ -239,10 +345,11 @@ function switchChannel(channel) {
 
   renderApp(allRawVideos);
   renderHistory(allRawHistory);
+  updateBacaKomenUI();
 }
 
 function updateSelesaiBtnState() {
-  if (hasCopiedSyuting && currentBatchItems.length > 0) {
+  if (hasCopiedSyuting && currentBatchItems.length > 0 && isBacaKomenComplete()) {
     btnSelesaiSyuting.disabled = false;
     btnSelesaiSyuting.className = "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border border-emerald-500/40 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 opacity-100";
   } else {
@@ -392,6 +499,7 @@ window.switchBatch = (batchNum) => {
   activeBatch = batchNum;
   hasCopiedSyuting = false;
   renderApp(allRawVideos);
+  updateBacaKomenUI();
 };
 
 // RENDER UTAMA
@@ -418,7 +526,6 @@ function renderApp(items) {
   if (currentBatchItems.length === 0) {
     hasCopiedSyuting = false;
   }
-  updateSelesaiBtnState();
 
   // RENDER SESI SYUTING TABS
   const batchTabsContainer = document.getElementById("batchTabsContainer");
@@ -511,6 +618,7 @@ function renderApp(items) {
   }
 
   renderBankList();
+  updateBacaKomenUI();
 }
 
 // RENDER BANK VIDEO
@@ -653,12 +761,26 @@ btnCopySyuting.addEventListener("click", async () => {
     return showCustomAlert("Daftar Syuting Kosong", `Belum ada video di Sesi #${activeBatch} untuk disalin.`);
   }
 
-  const formattedText = currentBatchItems
+  if (!isBacaKomenComplete()) {
+    return showCustomAlert("Baca Komen Belum Lengkap!", "Silakan klik menu Baca Komen dan lengkapi data terlebih dahulu.");
+  }
+
+  const bk = getBacaKomenData();
+
+  let formattedText = `💬 *BACA KOMEN YOUTUBE*\n`;
+  formattedText += `• Link YT: ${bk.ytUrl}\n`;
+  formattedText += `• Akun #1: ${bk.account1}\n`;
+  formattedText += `• Akun #2: ${bk.account2}\n\n`;
+  formattedText += `🎯 *DAFTAR VIDEO SYUTING (${currentBatchItems.length} Video)*\n`;
+
+  const videoListText = currentBatchItems
     .map((item, index) => {
       const authorStr = item.author || extractUsernameFromUrl(item.url);
       return `${index + 1}. [${authorStr}] [${formatDurationText(item.duration || 0)}] ${item.caption}`;
     })
     .join("\n\n");
+
+  formattedText += videoListText;
 
   try {
     await navigator.clipboard.writeText(formattedText);
@@ -692,12 +814,15 @@ btnActionConfirm.addEventListener("click", async () => {
   confirmModal.classList.add("hidden");
   try {
     const ytCalc = calculateYtEditDuration(currentBatchItems);
+    const bk = getBacaKomenData();
+
     const historyData = {
       channel: activeChannel,
       batchName: `Sesi #${activeBatch}`,
       completedAt: serverTimestamp(),
       count: currentBatchItems.length,
       estimatedYtDuration: ytCalc.formatted,
+      bacaKomen: { ...bk },
       videos: currentBatchItems.map(item => ({
         url: item.url,
         duration: item.duration || 0,
@@ -710,6 +835,15 @@ btnActionConfirm.addEventListener("click", async () => {
 
     await addDoc(historyRef, historyData);
     await Promise.all(currentBatchItems.map(item => deleteDoc(doc(db, "videos", item.id))));
+    
+    // Hapus data Baca Komen aktif setelah sesi selesai
+    const key = getBacaKomenKey();
+    try {
+      await deleteDoc(doc(db, "baca_komen", key));
+    } catch (e) {
+      console.log("Cleanup baca komen:", e);
+    }
+
     hasCopiedSyuting = false;
     updateSelesaiBtnState();
 
@@ -744,7 +878,16 @@ window.copyHistorySession = async (historyId) => {
     return showCustomAlert("Riwayat Kosong", "Tidak ada data video untuk disalin dari sesi ini.");
   }
 
-  const formattedText = session.videos
+  let formattedText = "";
+  if (session.bacaKomen && session.bacaKomen.ytUrl) {
+    formattedText += `💬 *BACA KOMEN YOUTUBE*\n`;
+    formattedText += `• Link YT: ${session.bacaKomen.ytUrl}\n`;
+    formattedText += `• Akun #1: ${session.bacaKomen.account1}\n`;
+    formattedText += `• Akun #2: ${session.bacaKomen.account2}\n\n`;
+  }
+
+  formattedText += `🎯 *DAFTAR VIDEO SYUTING (${session.videos.length} Video)*\n`;
+  formattedText += session.videos
     .map((item, index) => {
       const authorStr = item.author || extractUsernameFromUrl(item.url);
       return `${index + 1}. [${authorStr}] [${formatDurationText(item.duration || 0)}] ${item.caption}`;
@@ -784,6 +927,14 @@ function renderHistory(historyDocs) {
       }) + " WIB";
     }
 
+    const bacaKomenHtml = session.bacaKomen && session.bacaKomen.ytUrl ? `
+      <div class="bg-amber-50/80 border border-amber-200 p-3 rounded-xl text-xs space-y-1 w-full">
+        <p class="font-bold text-amber-900 flex items-center gap-1">💬 Baca Komen YouTube:</p>
+        <p class="text-neutral-700 truncate"><strong>Link:</strong> <a href="${session.bacaKomen.ytUrl}" target="_blank" class="text-orange-600 hover:underline">${session.bacaKomen.ytUrl}</a></p>
+        <p class="text-neutral-700"><strong>Akun #1:</strong> ${escapeHtml(session.bacaKomen.account1)} | <strong>Akun #2:</strong> ${escapeHtml(session.bacaKomen.account2)}</p>
+      </div>
+    ` : '';
+
     const videosHtml = (session.videos || []).map((v, vIdx) => `
       <div class="bg-white border border-neutral-200 p-3.5 rounded-2xl flex gap-3 items-center shadow-2xs w-full min-w-0">
         ${v.thumbnail ? `<img src="${v.thumbnail}" class="w-14 h-20 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200" />` : ''}
@@ -817,6 +968,8 @@ function renderHistory(historyDocs) {
             <button onclick="deleteHistorySession('${session.id}')" class="text-xs text-red-600 hover:text-red-700 font-bold ml-1">Hapus</button>
           </div>
         </div>
+
+        ${bacaKomenHtml}
 
         <div class="grid md:grid-cols-2 gap-3">
           ${videosHtml}
