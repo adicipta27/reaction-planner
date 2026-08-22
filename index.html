@@ -189,39 +189,61 @@
 
   </div>
 
-  <!-- MODAL BACA KOMEN -->
+  <!-- MODAL BACA KOMEN & SUPER THANKS -->
   <div id="bacaKomenModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 z-50 hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl min-w-0">
-      <div class="flex justify-between items-center border-b pb-3">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl min-w-0 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b pb-3 flex-shrink-0">
         <h3 class="font-bold text-base sm:text-lg text-neutral-900 flex items-center gap-2">
-          <span>💬</span> Pengaturan Baca Komen
+          <span>💬</span> Pengaturan Baca Komen & Super Thanks
         </h3>
         <button id="btnCloseBacaKomenModalX" class="text-neutral-400 hover:text-black text-xl cursor-pointer">✕</button>
       </div>
       
-      <p class="text-xs text-neutral-500 leading-relaxed">
-        Lengkapi link YouTube dan 2 akun wajib dibacakan. Tombol <strong>Copy Poin Video</strong> hanya dapat diakses jika data ini terisi penuh.
-      </p>
+      <div class="overflow-y-auto space-y-4 pr-1 flex-1">
+        <p class="text-xs text-neutral-500 leading-relaxed">
+          Lengkapi link YouTube dan 2 akun wajib dibacakan. Anda juga bisa menambah daftar <strong>Super Thanks</strong> secara bebas (tanpa batasan).
+        </p>
 
-      <div class="space-y-3.5 text-xs sm:text-sm">
-        <div>
-          <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Link Video YouTube *</label>
-          <input type="url" id="bacaKomenYtUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+        <!-- INPUT WAJIB -->
+        <div class="space-y-3 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Link Video YouTube *</label>
+            <input type="url" id="bacaKomenYtUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Nama Akun #1 *</label>
+              <input type="text" id="bacaKomenAccount1" placeholder="Nama akun..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+            </div>
+            <div>
+              <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Nama Akun #2 *</label>
+              <input type="text" id="bacaKomenAccount2" placeholder="Nama akun..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+            </div>
+          </div>
         </div>
-        <div>
-          <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Nama Akun #1 *</label>
-          <input type="text" id="bacaKomenAccount1" placeholder="Masukkan nama akun pertama..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
-        </div>
-        <div>
-          <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Nama Akun #2 *</label>
-          <input type="text" id="bacaKomenAccount2" placeholder="Masukkan nama akun kedua..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+
+        <!-- SEKSI SUPER THANKS (DINAMIS UNLIMITED) -->
+        <div class="pt-3 border-t border-neutral-100 space-y-3">
+          <div class="flex justify-between items-center">
+            <label class="block font-bold text-amber-900 uppercase tracking-wider text-[11px] flex items-center gap-1">
+              <span>💖</span> Daftar Super Thanks (Opsional)
+            </label>
+            <button id="btnAddSuperThanks" type="button" class="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer">
+              + Tambah Item
+            </button>
+          </div>
+
+          <div id="superThanksContainer" class="space-y-2">
+            <!-- Render Dynamic Super Thanks Rows -->
+          </div>
         </div>
       </div>
 
-      <div class="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+      <div class="flex justify-end gap-2 pt-3 border-t border-neutral-100 flex-shrink-0">
         <button id="btnCancelBacaKomen" class="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-xl font-bold text-xs sm:text-sm cursor-pointer hover:bg-neutral-200 transition-all">Batal</button>
         <button id="btnSaveBacaKomen" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs sm:text-sm cursor-pointer transition-all">Simpan Data</button>
       </div>
+      
     </div>
   </div>
 
