@@ -61,7 +61,7 @@ const btnScrollRight = document.getElementById("btnScrollRight");
 const totalYtDuration = document.getElementById("totalYtDuration");
 const badgeTikTokSum = document.getElementById("badgeTikTokSum");
 
-// Elemen DOM Baca Komen Modal
+// Elemen DOM Baca Komen & Super Thanks Modal
 const btnOpenBacaKomen = document.getElementById("btnOpenBacaKomen");
 const badgeBacaKomenStatus = document.getElementById("badgeBacaKomenStatus");
 const bacaKomenModal = document.getElementById("bacaKomenModal");
@@ -71,28 +71,8 @@ const btnSaveBacaKomen = document.getElementById("btnSaveBacaKomen");
 const bacaKomenYtUrl = document.getElementById("bacaKomenYtUrl");
 const bacaKomenAccount1 = document.getElementById("bacaKomenAccount1");
 const bacaKomenAccount2 = document.getElementById("bacaKomenAccount2");
-
-// FITUR TEKAN ENTER UNTUK SIMPAN otomatis
-[tiktokUrlInput, tiktokDurationInput, tiktokCategoryInput, tiktokCaptionInput].forEach(input => {
-  if (input) {
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        btnSave.click();
-      }
-    });
-  }
-});
-
-// Event Listener Scroll Kategori
-if (btnScrollLeft && btnScrollRight && categoryTabs) {
-  btnScrollLeft.addEventListener("click", () => {
-    categoryTabs.scrollBy({ left: -220, behavior: "smooth" });
-  });
-  btnScrollRight.addEventListener("click", () => {
-    categoryTabs.scrollBy({ left: 220, behavior: "smooth" });
-  });
-}
+const superThanksContainer = document.getElementById("superThanksContainer");
+const btnAddSuperThanks = document.getElementById("btnAddSuperThanks");
 
 // Modal Elements
 const editModal = document.getElementById("editModal");
@@ -133,31 +113,80 @@ let selectedCategory = "Semua";
 let selectedAccount = "Semua";
 let hasCopiedSyuting = false;
 
+// HELPER: Ekstrak Tanggal Posting Otomatis dari ID Video TikTok
+function extractTikTokPostDate(url) {
+  if (!url) return "Tgl Post N/A";
+  try {
+    const match = url.match(/\/video\/(\d+)/);
+    if (!match) return "Tgl Post N/A";
+    const videoId = match[1];
+    const timestamp = Number(BigInt(videoId) >> 32n);
+    if (isNaN(timestamp) || timestamp <= 0) return "Tgl Post N/A";
+
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    });
+  } catch (e) {
+    return "Tgl Post N/A";
+  }
+}
+
 function extractUsernameFromUrl(url) {
   if (!url) return "Akun TikTok";
   const match = url.match(/@([a-zA-Z0-9_\.]+)/);
   return match ? `@${match[1]}` : "Akun TikTok";
 }
 
-// DRAG & DROP
-Sortable.create(listSyuting, {
-  animation: 200,
-  handle: ".drag-handle",
-  ghostClass: "opacity-40",
-  onEnd: async () => {
-    const cardElements = listSyuting.querySelectorAll("[data-id]");
-    const updatePromises = Array.from(cardElements).map((el, newIndex) => {
-      const docId = el.getAttribute("data-id");
-      return updateDoc(doc(db, "videos", docId), { order: newIndex });
+// ENTER UNTUK SIMPAN
+[tiktokUrlInput, tiktokDurationInput, tiktokCategoryInput, tiktokCaptionInput].forEach(input => {
+  if (input) {
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (btnSave) btnSave.click();
+      }
     });
-    try {
-      await Promise.all(updatePromises);
-    } catch (err) {
-      console.error("Gagal memperbarui urutan:", err);
-      showCustomAlert("Gagal Urutkan", "Terjadi kesalahan saat menyusun ulang urutan syuting.");
-    }
   }
 });
+
+// Event Listener Scroll Kategori
+if (btnScrollLeft && btnScrollRight && categoryTabs) {
+  btnScrollLeft.addEventListener("click", () => {
+    categoryTabs.scrollBy({ left: -220, behavior: "smooth" });
+  });
+  btnScrollRight.addEventListener("click", () => {
+    categoryTabs.scrollBy({ left: 220, behavior: "smooth" });
+  });
+}
+
+// DRAG & DROP SAFE INIT
+if (listSyuting && typeof Sortable !== "undefined") {
+  try {
+    Sortable.create(listSyuting, {
+      animation: 200,
+      handle: ".drag-handle",
+      ghostClass: "opacity-40",
+      onEnd: async () => {
+        const cardElements = listSyuting.querySelectorAll("[data-id]");
+        const updatePromises = Array.from(cardElements).map((el, newIndex) => {
+          const docId = el.getAttribute("data-id");
+          return updateDoc(doc(db, "videos", docId), { order: newIndex });
+        });
+        try {
+          await Promise.all(updatePromises);
+        } catch (err) {
+          console.error("Gagal memperbarui urutan:", err);
+          showCustomAlert("Gagal Urutkan", "Terjadi kesalahan saat menyusun ulang urutan syuting.");
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("Sortable JS Init Warning:", e);
+  }
+}
 
 function parseDurationToSeconds(val) {
   if (!val) return 0;
@@ -221,23 +250,25 @@ function playAlertSound() {
 
 function showCustomAlert(title, message) {
   playAlertSound();
-  customAlertTitle.innerText = title || "Peringatan!";
-  customAlertMessage.innerText = message || "";
-  customAlertModal.classList.remove("hidden");
+  if (customAlertTitle) customAlertTitle.innerText = title || "Peringatan!";
+  if (customAlertMessage) customAlertMessage.innerText = message || "";
+  if (customAlertModal) customAlertModal.classList.remove("hidden");
 }
 
-btnCloseCustomAlert.addEventListener("click", () => {
-  customAlertModal.classList.add("hidden");
-});
+if (btnCloseCustomAlert) {
+  btnCloseCustomAlert.addEventListener("click", () => {
+    if (customAlertModal) customAlertModal.classList.add("hidden");
+  });
+}
 
-// LOGIKA BACA KOMEN
+// LOGIKA BACA KOMEN & SUPER THANKS
 function getBacaKomenKey() {
   return `${activeChannel}_batch_${activeBatch}`;
 }
 
 function getBacaKomenData() {
   const key = getBacaKomenKey();
-  return allRawBacaKomen[key] || { ytUrl: "", account1: "", account2: "" };
+  return allRawBacaKomen[key] || { ytUrl: "", account1: "", account2: "", superThanks: [] };
 }
 
 function isBacaKomenComplete() {
@@ -270,12 +301,43 @@ function updateBacaKomenUI() {
   updateSelesaiBtnState();
 }
 
+function renderSuperThanksRow(item = { account: '', amount: '', url: '' }) {
+  const div = document.createElement("div");
+  div.className = "super-thanks-row bg-neutral-50 p-2.5 rounded-xl border border-neutral-200/80 space-y-2 relative";
+  div.innerHTML = `
+    <button type="button" class="btn-remove-st absolute top-2 right-2 text-neutral-400 hover:text-red-600 font-bold text-xs p-1">✕</button>
+    <div class="grid grid-cols-2 gap-2 pr-6">
+      <input type="text" placeholder="Nama Akun" value="${escapeHtml(item.account || '')}" class="st-account text-xs p-2 border border-neutral-200 rounded-lg bg-white focus:outline-none focus:border-amber-500">
+      <input type="text" placeholder="Nominal (ex: Rp 20.000)" value="${escapeHtml(item.amount || '')}" class="st-amount text-xs p-2 border border-neutral-200 rounded-lg bg-white focus:outline-none focus:border-amber-500">
+    </div>
+    <input type="url" placeholder="Link Video Super Thanks..." value="${escapeHtml(item.url || '')}" class="st-url w-full text-xs p-2 border border-neutral-200 rounded-lg bg-white focus:outline-none focus:border-amber-500">
+  `;
+
+  div.querySelector(".btn-remove-st").addEventListener("click", () => div.remove());
+  return div;
+}
+
+if (btnAddSuperThanks && superThanksContainer) {
+  btnAddSuperThanks.addEventListener("click", () => {
+    superThanksContainer.appendChild(renderSuperThanksRow());
+  });
+}
+
 if (btnOpenBacaKomen) {
   btnOpenBacaKomen.addEventListener("click", () => {
     const data = getBacaKomenData();
     if (bacaKomenYtUrl) bacaKomenYtUrl.value = data.ytUrl || "";
     if (bacaKomenAccount1) bacaKomenAccount1.value = data.account1 || "";
     if (bacaKomenAccount2) bacaKomenAccount2.value = data.account2 || "";
+
+    if (superThanksContainer) {
+      superThanksContainer.innerHTML = "";
+      const stList = data.superThanks || [];
+      stList.forEach(stItem => {
+        superThanksContainer.appendChild(renderSuperThanksRow(stItem));
+      });
+    }
+
     if (bacaKomenModal) bacaKomenModal.classList.remove("hidden");
   });
 }
@@ -294,8 +356,19 @@ if (btnSaveBacaKomen) {
     const account2 = bacaKomenAccount2 ? bacaKomenAccount2.value.trim() : "";
 
     if (!ytUrl || !account1 || !account2) {
-      return showCustomAlert("Data Belum Lengkap!", "Harap isi semua kolom: Link YouTube, Nama Akun #1, dan Nama Akun #2.");
+      return showCustomAlert("Data Belum Lengkap!", "Harap isi semua kolom wajib: Link YouTube, Nama Akun #1, dan Nama Akun #2.");
     }
+
+    const stRows = superThanksContainer ? superThanksContainer.querySelectorAll(".super-thanks-row") : [];
+    const superThanksList = [];
+    stRows.forEach(row => {
+      const account = row.querySelector(".st-account")?.value.trim() || "";
+      const amount = row.querySelector(".st-amount")?.value.trim() || "";
+      const url = row.querySelector(".st-url")?.value.trim() || "";
+      if (account || amount || url) {
+        superThanksList.push({ account, amount, url });
+      }
+    });
 
     const key = getBacaKomenKey();
     try {
@@ -303,6 +376,7 @@ if (btnSaveBacaKomen) {
         ytUrl,
         account1,
         account2,
+        superThanks: superThanksList,
         updatedAt: serverTimestamp()
       });
       closeBacaKomenModal();
@@ -320,10 +394,10 @@ onSnapshot(bacaKomenRef, (snapshot) => {
     allRawBacaKomen[doc.id] = doc.data();
   });
   updateBacaKomenUI();
-});
+}, (err) => console.error("Error Baca Komen Listener:", err));
 
-tabAdinoki.addEventListener("click", () => switchChannel("adinoki"));
-tabReaction.addEventListener("click", () => switchChannel("reaction"));
+if (tabAdinoki) tabAdinoki.addEventListener("click", () => switchChannel("adinoki"));
+if (tabReaction) tabReaction.addEventListener("click", () => switchChannel("reaction"));
 
 function switchChannel(channel) {
   activeChannel = channel;
@@ -332,15 +406,15 @@ function switchChannel(channel) {
   selectedAccount = "Semua";
 
   if (activeChannel === "adinoki") {
-    tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all";
-    tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all";
-    activeChannelBadge.innerText = "TARGET: YT ADINOKI";
-    historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki";
+    if (tabAdinoki) tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
+    if (tabReaction) tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
+    if (activeChannelBadge) activeChannelBadge.innerText = "TARGET: YT ADINOKI";
+    if (historySubTitle) historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki";
   } else {
-    tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all";
-    tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all";
-    activeChannelBadge.innerText = "TARGET: YT ADINOKI REACTION";
-    historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki Reaction";
+    if (tabReaction) tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
+    if (tabAdinoki) tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
+    if (activeChannelBadge) activeChannelBadge.innerText = "TARGET: YT ADINOKI REACTION";
+    if (historySubTitle) historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki Reaction";
   }
 
   renderApp(allRawVideos);
@@ -349,6 +423,7 @@ function switchChannel(channel) {
 }
 
 function updateSelesaiBtnState() {
+  if (!btnSelesaiSyuting) return;
   if (hasCopiedSyuting && currentBatchItems.length > 0 && isBacaKomenComplete()) {
     btnSelesaiSyuting.disabled = false;
     btnSelesaiSyuting.className = "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border border-emerald-500/40 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 opacity-100";
@@ -377,87 +452,93 @@ if (btnPaste) {
   });
 }
 
-btnFetch.addEventListener("click", async () => {
-  const url = tiktokUrlInput.value.trim();
-  if (!url) return showCustomAlert("Input Kosong!", "Masukkan link TikTok terlebih dahulu!");
+if (btnFetch) {
+  btnFetch.addEventListener("click", async () => {
+    const url = tiktokUrlInput.value.trim();
+    if (!url) return showCustomAlert("Input Kosong!", "Masukkan link TikTok terlebih dahulu!");
 
-  btnFetch.innerText = "Mengambil...";
-  btnFetch.disabled = true;
+    btnFetch.innerText = "Mengambil...";
+    btnFetch.disabled = true;
 
-  try {
-    const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-    if (!response.ok) throw new Error("Gagal mengambil data TikTok");
-    
-    const data = await response.json();
-    tiktokCaptionInput.value = data.title || "Gagal mendapatkan caption otomatis.";
-    currentThumbnail = data.thumbnail_url || "";
-    currentAuthor = data.author_name ? `@${data.author_name}` : extractUsernameFromUrl(url);
-  } catch (error) {
-    currentAuthor = extractUsernameFromUrl(url);
-    showCustomAlert("Gagal Ambil Data", "Gagal mengambil data otomatis. Kamu tetap bisa mengetik caption manual.");
-  } finally {
-    btnFetch.innerText = "Ambil Caption & Thumbnail";
-    btnFetch.disabled = false;
-  }
-});
-
-btnSave.addEventListener("click", async () => {
-  const url = tiktokUrlInput.value.trim();
-  const rawDuration = tiktokDurationInput.value.trim();
-  const parsedSeconds = parseDurationToSeconds(rawDuration);
-  const caption = tiktokCaptionInput.value.trim();
-  const manualCategory = tiktokCategoryInput.value.trim() || "Lainnya";
-
-  if (!url) return showCustomAlert("Input Kosong!", "Link TikTok tidak boleh kosong!");
-  if (!rawDuration || parsedSeconds <= 0) {
-    return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid! Contoh: 45 atau 1.25");
-  }
-
-  let thumbnailToSave = currentThumbnail;
-  let authorToSave = currentAuthor || extractUsernameFromUrl(url);
-
-  if (!thumbnailToSave) {
     try {
       const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-      if (response.ok) {
-        const data = await response.json();
-        thumbnailToSave = data.thumbnail_url || "";
-        if (data.author_name) authorToSave = `@${data.author_name}`;
-        if (!caption) tiktokCaptionInput.value = data.title || "Tanpa caption";
-      }
-    } catch (e) {
-      console.log("Gagal fetch thumbnail:", e);
+      if (!response.ok) throw new Error("Gagal mengambil data TikTok");
+      
+      const data = await response.json();
+      tiktokCaptionInput.value = data.title || "Gagal mendapatkan caption otomatis.";
+      currentThumbnail = data.thumbnail_url || "";
+      currentAuthor = data.author_name ? `@${data.author_name}` : extractUsernameFromUrl(url);
+    } catch (error) {
+      currentAuthor = extractUsernameFromUrl(url);
+      showCustomAlert("Gagal Ambil Data", "Gagal mengambil data otomatis. Kamu tetap bisa mengetik caption manual.");
+    } finally {
+      btnFetch.innerText = "Ambil Caption & Thumbnail";
+      btnFetch.disabled = false;
     }
-  }
+  });
+}
 
-  const finalCaption = tiktokCaptionInput.value.trim() || caption || "Tanpa caption";
+if (btnSave) {
+  btnSave.addEventListener("click", async () => {
+    const url = tiktokUrlInput.value.trim();
+    const rawDuration = tiktokDurationInput.value.trim();
+    const parsedSeconds = parseDurationToSeconds(rawDuration);
+    const caption = tiktokCaptionInput.value.trim();
+    const manualCategory = tiktokCategoryInput.value.trim() || "Lainnya";
 
-  try {
-    await addDoc(videosRef, {
-      channel: activeChannel,
-      url: url,
-      duration: parsedSeconds,
-      caption: finalCaption,
-      thumbnail: thumbnailToSave,
-      author: authorToSave,
-      category: manualCategory,
-      status: "bank",
-      batch: 1,
-      order: 999,
-      createdAt: serverTimestamp()
-    });
+    if (!url) return showCustomAlert("Input Kosong!", "Link TikTok tidak boleh kosong!");
+    if (!rawDuration || parsedSeconds <= 0) {
+      return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid! Contoh: 45 atau 1.25");
+    }
 
-    tiktokUrlInput.value = "";
-    tiktokDurationInput.value = "";
-    tiktokCaptionInput.value = "";
-    tiktokCategoryInput.value = "";
-    currentThumbnail = "";
-    currentAuthor = "";
-  } catch (error) {
-    console.error("Gagal menyimpan data:", error);
-    showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat menyimpan data ke Firebase.");
-  }
-});
+    let thumbnailToSave = currentThumbnail;
+    let authorToSave = currentAuthor || extractUsernameFromUrl(url);
+    const postDateToSave = extractTikTokPostDate(url);
+
+    if (!thumbnailToSave) {
+      try {
+        const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
+        if (response.ok) {
+          const data = await response.json();
+          thumbnailToSave = data.thumbnail_url || "";
+          if (data.author_name) authorToSave = `@${data.author_name}`;
+          if (!caption) tiktokCaptionInput.value = data.title || "Tanpa caption";
+        }
+      } catch (e) {
+        console.log("Gagal fetch thumbnail:", e);
+      }
+    }
+
+    const finalCaption = tiktokCaptionInput.value.trim() || caption || "Tanpa caption";
+
+    try {
+      await addDoc(videosRef, {
+        channel: activeChannel,
+        url: url,
+        duration: parsedSeconds,
+        caption: finalCaption,
+        thumbnail: thumbnailToSave,
+        author: authorToSave,
+        postedAt: postDateToSave,
+        category: manualCategory,
+        status: "bank",
+        batch: 1,
+        order: 999,
+        createdAt: serverTimestamp()
+      });
+
+      tiktokUrlInput.value = "";
+      tiktokDurationInput.value = "";
+      tiktokCaptionInput.value = "";
+      tiktokCategoryInput.value = "";
+      currentThumbnail = "";
+      currentAuthor = "";
+    } catch (error) {
+      console.error("Gagal menyimpan data:", error);
+      showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat menyimpan data ke Firebase.");
+    }
+  });
+}
 
 const q = query(videosRef, orderBy("createdAt", "desc"));
 onSnapshot(q, (snapshot) => {
@@ -467,7 +548,7 @@ onSnapshot(q, (snapshot) => {
   });
 
   renderApp(allRawVideos);
-});
+}, (err) => console.error("Error Videos Listener:", err));
 
 function calculateYtEditDuration(items) {
   if (!items || items.length === 0) {
@@ -512,16 +593,15 @@ function renderApp(items) {
     .filter(i => i.status === "syuting")
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // Filter video berdasarkan Batch aktif (Sesi 1, 2, atau 3)
   currentBatchItems = currentSyutingItems.filter(i => (i.batch || 1) === activeBatch);
   currentBankItems = channelFilteredItems.filter(i => i.status === "bank");
 
-  countSyuting.innerText = currentBatchItems.length;
-  countBank.innerText = currentBankItems.length;
+  if (countSyuting) countSyuting.innerText = currentBatchItems.length;
+  if (countBank) countBank.innerText = currentBankItems.length;
 
   const ytCalc = calculateYtEditDuration(currentBatchItems);
-  totalYtDuration.innerText = ytCalc.formatted;
-  badgeTikTokSum.innerText = `TOTAL BAHAN: ${ytCalc.tiktokSumFormatted.toUpperCase()}`;
+  if (totalYtDuration) totalYtDuration.innerText = ytCalc.formatted;
+  if (badgeTikTokSum) badgeTikTokSum.innerText = `TOTAL BAHAN: ${ytCalc.tiktokSumFormatted.toUpperCase()}`;
 
   if (currentBatchItems.length === 0) {
     hasCopiedSyuting = false;
@@ -550,71 +630,77 @@ function renderApp(items) {
   }
 
   // RENDER SIAP SYUTING LIST
-  if (currentBatchItems.length === 0) {
-    listSyuting.innerHTML = `<p class="text-neutral-400 text-sm text-center py-10 font-medium bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">Belum ada video untuk <strong>Sesi #${activeBatch}</strong>. Pilih dari Bank Video di bawah!</p>`;
-  } else {
-    listSyuting.innerHTML = currentBatchItems.map((item, index) => {
-      const imgHtml = item.thumbnail 
-        ? `<img src="${item.thumbnail}" alt="Thumbnail" class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200 shadow-2xs" />`
-        : `<div class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 bg-neutral-100 rounded-xl flex items-center justify-center text-xs text-neutral-400 flex-shrink-0 border border-neutral-200 text-center p-2">Tidak Ada Gambar</div>`;
+  if (listSyuting) {
+    if (currentBatchItems.length === 0) {
+      listSyuting.innerHTML = `<p class="text-neutral-400 text-sm text-center py-10 font-medium bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">Belum ada video untuk <strong>Sesi #${activeBatch}</strong>. Pilih dari Bank Video di bawah!</p>`;
+    } else {
+      listSyuting.innerHTML = currentBatchItems.map((item, index) => {
+        const imgHtml = item.thumbnail 
+          ? `<img src="${item.thumbnail}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://placehold.co/160x200/f5f5f5/a3a3a3?text=Gambar+Expired';" alt="Thumbnail" class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200 shadow-2xs" />`
+          : `<div class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 bg-neutral-100 rounded-xl flex items-center justify-center text-xs text-neutral-400 flex-shrink-0 border border-neutral-200 text-center p-2">Tidak Ada Gambar</div>`;
 
-      const isLongText = item.caption && item.caption.length > 120;
-      const seeMoreBtn = isLongText 
-        ? `<button id="btn-caption-${item.id}" onclick="toggleCaption('${item.id}')" class="text-xs text-orange-600 hover:text-orange-700 font-bold mt-1 inline-block focus:outline-none">Lihat Selengkapnya</button>` 
-        : '';
+        const isLongText = item.caption && item.caption.length > 120;
+        const seeMoreBtn = isLongText 
+          ? `<button id="btn-caption-${item.id}" onclick="toggleCaption('${item.id}')" class="text-xs text-orange-600 hover:text-orange-700 font-bold mt-1 inline-block focus:outline-none">Lihat Selengkapnya</button>` 
+          : '';
 
-      const categoryTag = item.category || "Lainnya";
-      const authorTag = item.author || extractUsernameFromUrl(item.url);
-      const itemDurationSec = item.duration || 0;
-      const itemDurationFormatted = formatDurationText(itemDurationSec);
+        const categoryTag = item.category || "Lainnya";
+        const authorTag = item.author || extractUsernameFromUrl(item.url);
+        const postedDateTag = item.postedAt || extractTikTokPostDate(item.url);
+        const itemDurationSec = item.duration || 0;
+        const itemDurationFormatted = formatDurationText(itemDurationSec);
 
-      return `
-        <div data-id="${item.id}" class="bg-white border border-neutral-200/90 hover:border-orange-300 transition-all p-4 rounded-2xl flex flex-row gap-4 items-start shadow-2xs w-full min-w-0 box-border">
-          ${imgHtml}
-          <div class="flex-1 space-y-2.5 min-w-0 flex flex-col justify-between self-stretch">
-            
-            <div class="space-y-2 w-full min-w-0">
-              <div class="flex flex-wrap items-center justify-between gap-1.5 w-full min-w-0">
-                <div class="flex flex-wrap items-center gap-1.5 min-w-0">
-                  <div class="drag-handle cursor-grab active:cursor-grabbing text-neutral-400 hover:text-orange-600 px-1.5 py-0.5 rounded border border-neutral-200 bg-white text-xs font-bold transition-colors flex items-center gap-1" title="Geser urutan">
-                    <span>⋮⋮</span>
-                    <span class="text-[10px] text-neutral-500 font-normal">Geser</span>
+        return `
+          <div data-id="${item.id}" class="bg-white border border-neutral-200/90 hover:border-orange-300 transition-all p-4 rounded-2xl flex flex-row gap-4 items-start shadow-2xs w-full min-w-0 box-border">
+            ${imgHtml}
+            <div class="flex-1 space-y-2.5 min-w-0 flex flex-col justify-between self-stretch">
+              
+              <div class="space-y-2 w-full min-w-0">
+                <div class="flex flex-wrap items-center justify-between gap-1.5 w-full min-w-0">
+                  <div class="flex flex-wrap items-center gap-1.5 min-w-0">
+                    <div class="drag-handle cursor-grab active:cursor-grabbing text-neutral-400 hover:text-orange-600 px-1.5 py-0.5 rounded border border-neutral-200 bg-white text-xs font-bold transition-colors flex items-center gap-1" title="Geser urutan">
+                      <span>⋮⋮</span>
+                      <span class="text-[10px] text-neutral-500 font-normal">Geser</span>
+                    </div>
+                    <span class="bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-black px-2 py-0.5 rounded-full shadow-2xs">
+                      #${index + 1}
+                    </span>
+                    <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-md border border-blue-200/80 font-bold max-w-[100px] sm:max-w-[140px] truncate" title="${escapeHtml(authorTag)}">
+                      👤 ${escapeHtml(authorTag)}
+                    </span>
+                    <span class="bg-purple-50 text-purple-700 text-xs px-2 py-0.5 rounded-md border border-purple-200 font-bold whitespace-nowrap">
+                      📅 ${postedDateTag}
+                    </span>
+                    <span class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded-md border border-red-200 font-semibold max-w-[80px] sm:max-w-[110px] truncate">
+                      🏷️ ${escapeHtml(categoryTag)}
+                    </span>
+                    <span class="bg-neutral-900 text-white text-xs px-2 py-0.5 rounded-md font-bold whitespace-nowrap">
+                      ⏱️ ${itemDurationFormatted}
+                    </span>
                   </div>
-                  <span class="bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-black px-2 py-0.5 rounded-full shadow-2xs">
-                    #${index + 1}
-                  </span>
-                  <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-md border border-blue-200/80 font-bold max-w-[100px] sm:max-w-[140px] truncate" title="${escapeHtml(authorTag)}">
-                    👤 ${escapeHtml(authorTag)}
-                  </span>
-                  <span class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded-md border border-red-200 font-semibold max-w-[80px] sm:max-w-[110px] truncate">
-                    🏷️ ${escapeHtml(categoryTag)}
-                  </span>
-                  <span class="bg-neutral-900 text-white text-xs px-2 py-0.5 rounded-md font-bold whitespace-nowrap">
-                    ⏱️ ${itemDurationFormatted}
-                  </span>
-                </div>
 
-                <button onclick="toggleStatus('${item.id}', 'bank')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-md font-bold transition-all whitespace-nowrap ml-auto">
-                  Kembalikan
-                </button>
+                  <button onclick="toggleStatus('${item.id}', 'bank')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-md font-bold transition-all whitespace-nowrap ml-auto">
+                    Kembalikan
+                  </button>
+                </div>
+                
+                <p id="caption-${item.id}" class="text-xs sm:text-sm font-bold text-neutral-800 leading-snug sm:leading-relaxed line-clamp-3 sm:line-clamp-4 break-words">
+                  ${escapeHtml(item.caption)}
+                </p>
+                ${seeMoreBtn}
               </div>
               
-              <p id="caption-${item.id}" class="text-xs sm:text-sm font-bold text-neutral-800 leading-snug sm:leading-relaxed line-clamp-3 sm:line-clamp-4 break-words">
-                ${escapeHtml(item.caption)}
-              </p>
-              ${seeMoreBtn}
-            </div>
-            
-            <div class="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-neutral-100 w-full min-w-0 mt-auto">
-              <a href="${item.url}" target="_blank" class="text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1">Buka TikTok ↗</a>
-              <div class="space-x-2">
-                <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`, ${itemDurationSec})" class="text-neutral-500 hover:text-neutral-900 font-semibold">Edit</button>
+              <div class="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-neutral-100 w-full min-w-0 mt-auto">
+                <a href="${item.url}" target="_blank" class="text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1">Buka TikTok ↗</a>
+                <div class="space-x-2">
+                  <button onclick="openEditModal('${item.id}')" class="text-neutral-500 hover:text-neutral-900 font-semibold">Edit</button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      `;
-    }).join("");
+        `;
+      }).join("");
+    }
   }
 
   renderBankList();
@@ -623,6 +709,8 @@ function renderApp(items) {
 
 // RENDER BANK VIDEO
 function renderBankList() {
+  if (!categoryTabs || !listBank) return;
+
   const categoriesInBank = ["Semua", ...Array.from(new Set(currentBankItems.map(i => i.category || "Lainnya"))).filter(Boolean)];
   const accountsInBank = ["Semua", ...Array.from(new Set(currentBankItems.map(i => i.author || extractUsernameFromUrl(i.url)))).filter(Boolean)];
 
@@ -665,7 +753,8 @@ function renderBankList() {
 
     return `
       <button 
-        onclick="filterItem(\`${escapeModalText(item)}\`)" 
+        data-filter-item="${escapeHtml(item)}"
+        onclick="filterItem(this.getAttribute('data-filter-item'))" 
         class="px-3.5 py-2 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all ${activeClass}"
       >
         ${escapeHtml(item)} <span class="${isSelected ? 'text-white/90' : 'text-neutral-400'} font-normal ml-0.5">(${count})</span>
@@ -691,7 +780,7 @@ function renderBankList() {
 
   listBank.innerHTML = filteredBank.map((item) => {
     const imgHtml = item.thumbnail 
-      ? `<img src="${item.thumbnail}" alt="Thumbnail" class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200 shadow-2xs" />`
+      ? `<img src="${item.thumbnail}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://placehold.co/160x200/f5f5f5/a3a3a3?text=Gambar+Expired';" alt="Thumbnail" class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200 shadow-2xs" />`
       : `<div class="w-32 sm:w-36 md:w-40 h-40 sm:h-44 md:h-48 bg-neutral-100 rounded-xl flex items-center justify-center text-xs text-neutral-400 flex-shrink-0 border border-neutral-200 text-center p-2">Tidak Ada Gambar</div>`;
 
     const isLongText = item.caption && item.caption.length > 120;
@@ -701,6 +790,7 @@ function renderBankList() {
 
     const categoryTag = item.category || "Lainnya";
     const authorTag = item.author || extractUsernameFromUrl(item.url);
+    const postedDateTag = item.postedAt || extractTikTokPostDate(item.url);
     const itemDurationSec = item.duration || 0;
     const itemDurationFormatted = formatDurationText(itemDurationSec);
 
@@ -713,6 +803,9 @@ function renderBankList() {
             <div class="flex flex-wrap items-center gap-1.5 w-full min-w-0">
               <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-md border border-blue-200/80 font-bold max-w-[100px] sm:max-w-[140px] truncate" title="${escapeHtml(authorTag)}">
                 👤 ${escapeHtml(authorTag)}
+              </span>
+              <span class="bg-purple-50 text-purple-700 text-xs px-2 py-0.5 rounded-md border border-purple-200 font-bold whitespace-nowrap">
+                📅 ${postedDateTag}
               </span>
               <span class="bg-neutral-100 text-neutral-700 text-xs px-2 py-0.5 rounded-md border border-neutral-200 font-semibold max-w-[80px] sm:max-w-[110px] truncate">
                 🏷️ ${escapeHtml(categoryTag)}
@@ -732,7 +825,7 @@ function renderBankList() {
             <a href="${item.url}" target="_blank" class="text-neutral-700 hover:text-black font-bold">Buka TikTok ↗</a>
             <div class="space-x-2 flex items-center ml-auto">
               <button onclick="toggleStatus('${item.id}', 'syuting')" class="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs active:scale-95 transition-all">+ Sesi #${activeBatch}</button>
-              <button onclick="openEditModal('${item.id}', \`${escapeModalText(item.caption)}\`, \`${escapeModalText(categoryTag)}\`, ${itemDurationSec})" class="text-neutral-500 hover:text-neutral-900 font-semibold">Edit</button>
+              <button onclick="openEditModal('${item.id}')" class="text-neutral-500 hover:text-neutral-900 font-semibold">Edit</button>
               <button onclick="deleteItem('${item.id}')" class="text-red-600 hover:text-red-700 font-semibold">Hapus</button>
             </div>
           </div>
@@ -756,111 +849,133 @@ window.filterItem = (val) => {
   renderBankList();
 };
 
-btnCopySyuting.addEventListener("click", async () => {
-  if (!currentBatchItems || currentBatchItems.length === 0) {
-    return showCustomAlert("Daftar Syuting Kosong", `Belum ada video di Sesi #${activeBatch} untuk disalin.`);
-  }
-
-  if (!isBacaKomenComplete()) {
-    return showCustomAlert("Baca Komen Belum Lengkap!", "Silakan klik menu Baca Komen dan lengkapi data terlebih dahulu.");
-  }
-
-  const bk = getBacaKomenData();
-
-  let formattedText = `💬 *BACA KOMEN YOUTUBE*\n`;
-  formattedText += `• Link YT: ${bk.ytUrl}\n`;
-  formattedText += `• Akun #1: ${bk.account1}\n`;
-  formattedText += `• Akun #2: ${bk.account2}\n\n`;
-  formattedText += `🎯 *DAFTAR VIDEO SYUTING (${currentBatchItems.length} Video)*\n`;
-
-  const videoListText = currentBatchItems
-    .map((item, index) => {
-      const authorStr = item.author || extractUsernameFromUrl(item.url);
-      return `${index + 1}. [${authorStr}] [${formatDurationText(item.duration || 0)}] ${item.caption}`;
-    })
-    .join("\n\n");
-
-  formattedText += videoListText;
-
-  try {
-    await navigator.clipboard.writeText(formattedText);
-    hasCopiedSyuting = true;
-    updateSelesaiBtnState();
-
-    const originalText = btnCopySyuting.innerHTML;
-    btnCopySyuting.innerHTML = "✅ Disalin!";
-    btnCopySyuting.classList.add("bg-emerald-50", "text-emerald-600", "border-emerald-300");
-
-    setTimeout(() => {
-      btnCopySyuting.innerHTML = originalText;
-      btnCopySyuting.classList.remove("bg-emerald-50", "text-emerald-600", "border-emerald-300");
-    }, 2000);
-  } catch (error) {
-    console.error("Gagal menyalin teks:", error);
-    showCustomAlert("Gagal Menyalin", "Gagal menyalin ke clipboard.");
-  }
-});
-
-btnSelesaiSyuting.addEventListener("click", () => {
-  if (!hasCopiedSyuting) return;
-  confirmModal.classList.remove("hidden");
-});
-
-btnCancelConfirm.addEventListener("click", () => {
-  confirmModal.classList.add("hidden");
-});
-
-btnActionConfirm.addEventListener("click", async () => {
-  confirmModal.classList.add("hidden");
-  try {
-    const ytCalc = calculateYtEditDuration(currentBatchItems);
-    const bk = getBacaKomenData();
-
-    const historyData = {
-      channel: activeChannel,
-      batchName: `Sesi #${activeBatch}`,
-      completedAt: serverTimestamp(),
-      count: currentBatchItems.length,
-      estimatedYtDuration: ytCalc.formatted,
-      bacaKomen: { ...bk },
-      videos: currentBatchItems.map(item => ({
-        url: item.url,
-        duration: item.duration || 0,
-        caption: item.caption,
-        author: item.author || extractUsernameFromUrl(item.url),
-        thumbnail: item.thumbnail || "",
-        category: item.category || "Lainnya"
-      }))
-    };
-
-    await addDoc(historyRef, historyData);
-    await Promise.all(currentBatchItems.map(item => deleteDoc(doc(db, "videos", item.id))));
-    
-    // Hapus data Baca Komen aktif setelah sesi selesai
-    const key = getBacaKomenKey();
-    try {
-      await deleteDoc(doc(db, "baca_komen", key));
-    } catch (e) {
-      console.log("Cleanup baca komen:", e);
+if (btnCopySyuting) {
+  btnCopySyuting.addEventListener("click", async () => {
+    if (!currentBatchItems || currentBatchItems.length === 0) {
+      return showCustomAlert("Daftar Syuting Kosong", `Belum ada video di Sesi #${activeBatch} untuk disalin.`);
     }
 
-    hasCopiedSyuting = false;
-    updateSelesaiBtnState();
+    if (!isBacaKomenComplete()) {
+      return showCustomAlert("Baca Komen Belum Lengkap!", "Silakan klik menu Baca Komen dan lengkapi data terlebih dahulu.");
+    }
 
-    showCustomAlert("Syuting Selesai! 🎉", `Sesi #${activeBatch} telah dipindahkan ke Riwayat. Estimasi durasi edit: ${ytCalc.formatted}.`);
-  } catch (error) {
-    console.error("Gagal memindahkan ke riwayat:", error);
-    showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat memindahkan ke riwayat syuting.");
-  }
-});
+    const bk = getBacaKomenData();
 
-btnOpenHistory.addEventListener("click", () => {
-  historyModal.classList.remove("hidden");
-});
+    let formattedText = `💬 *BACA KOMEN YOUTUBE*\n`;
+    formattedText += `• Link YT: ${bk.ytUrl}\n`;
+    formattedText += `• Akun #1: ${bk.account1}\n`;
+    formattedText += `• Akun #2: ${bk.account2}\n\n`;
 
-btnCloseHistoryModal.addEventListener("click", () => {
-  historyModal.classList.add("hidden");
-});
+    if (bk.superThanks && bk.superThanks.length > 0) {
+      formattedText += `💖 *SUPER THANKS (${bk.superThanks.length})*\n`;
+      bk.superThanks.forEach((st, idx) => {
+        formattedText += `${idx + 1}. [${st.account || 'Akun'}] (${st.amount || 'N/A'}) - Link: ${st.url || '-'}\n`;
+      });
+      formattedText += `\n`;
+    }
+
+    formattedText += `🎯 *DAFTAR VIDEO SYUTING (${currentBatchItems.length} Video)*\n`;
+
+    const videoListText = currentBatchItems
+      .map((item, index) => {
+        const authorStr = item.author || extractUsernameFromUrl(item.url);
+        const postDateStr = item.postedAt || extractTikTokPostDate(item.url);
+        return `${index + 1}. [${authorStr}] [Post: ${postDateStr}] [${formatDurationText(item.duration || 0)}] ${item.caption}`;
+      })
+      .join("\n\n");
+
+    formattedText += videoListText;
+
+    try {
+      await navigator.clipboard.writeText(formattedText);
+      hasCopiedSyuting = true;
+      updateSelesaiBtnState();
+
+      const originalText = btnCopySyuting.innerHTML;
+      btnCopySyuting.innerHTML = "✅ Disalin!";
+      btnCopySyuting.classList.add("bg-emerald-50", "text-emerald-600", "border-emerald-300");
+
+      setTimeout(() => {
+        btnCopySyuting.innerHTML = originalText;
+        btnCopySyuting.classList.remove("bg-emerald-50", "text-emerald-600", "border-emerald-300");
+      }, 2000);
+    } catch (error) {
+      console.error("Gagal menyalin teks:", error);
+      showCustomAlert("Gagal Menyalin", "Gagal menyalin ke clipboard.");
+    }
+  });
+}
+
+if (btnSelesaiSyuting) {
+  btnSelesaiSyuting.addEventListener("click", () => {
+    if (!hasCopiedSyuting) return;
+    if (confirmModal) confirmModal.classList.remove("hidden");
+  });
+}
+
+if (btnCancelConfirm) {
+  btnCancelConfirm.addEventListener("click", () => {
+    if (confirmModal) confirmModal.classList.add("hidden");
+  });
+}
+
+if (btnActionConfirm) {
+  btnActionConfirm.addEventListener("click", async () => {
+    if (confirmModal) confirmModal.classList.add("hidden");
+    try {
+      const ytCalc = calculateYtEditDuration(currentBatchItems);
+      const bk = getBacaKomenData();
+
+      const historyData = {
+        channel: activeChannel,
+        batchName: `Sesi #${activeBatch}`,
+        completedAt: serverTimestamp(),
+        count: currentBatchItems.length,
+        estimatedYtDuration: ytCalc.formatted,
+        bacaKomen: { ...bk },
+        videos: currentBatchItems.map(item => ({
+          url: item.url,
+          duration: item.duration || 0,
+          caption: item.caption,
+          author: item.author || extractUsernameFromUrl(item.url),
+          postedAt: item.postedAt || extractTikTokPostDate(item.url),
+          thumbnail: item.thumbnail || "",
+          category: item.category || "Lainnya"
+        }))
+      };
+
+      await addDoc(historyRef, historyData);
+      await Promise.all(currentBatchItems.map(item => deleteDoc(doc(db, "videos", item.id))));
+      
+      const key = getBacaKomenKey();
+      try {
+        await deleteDoc(doc(db, "baca_komen", key));
+      } catch (e) {
+        console.log("Cleanup baca komen:", e);
+      }
+
+      hasCopiedSyuting = false;
+      updateSelesaiBtnState();
+
+      showCustomAlert("Syuting Selesai! 🎉", `Sesi #${activeBatch} telah dipindahkan ke Riwayat. Estimasi durasi edit: ${ytCalc.formatted}.`);
+    } catch (error) {
+      console.error("Gagal memindahkan ke riwayat:", error);
+      showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat memindahkan ke riwayat syuting.");
+    }
+  });
+}
+
+if (btnOpenHistory) {
+  btnOpenHistory.addEventListener("click", () => {
+    if (historyModal) historyModal.classList.remove("hidden");
+  });
+}
+
+if (btnCloseHistoryModal) {
+  btnCloseHistoryModal.addEventListener("click", () => {
+    if (historyModal) historyModal.classList.add("hidden");
+  });
+}
 
 const qHistory = query(historyRef, orderBy("completedAt", "desc"));
 onSnapshot(qHistory, (snapshot) => {
@@ -870,7 +985,7 @@ onSnapshot(qHistory, (snapshot) => {
   });
 
   renderHistory(allRawHistory);
-});
+}, (err) => console.error("Error History Listener:", err));
 
 window.copyHistorySession = async (historyId) => {
   const session = allRawHistory.find(h => h.id === historyId);
@@ -884,13 +999,22 @@ window.copyHistorySession = async (historyId) => {
     formattedText += `• Link YT: ${session.bacaKomen.ytUrl}\n`;
     formattedText += `• Akun #1: ${session.bacaKomen.account1}\n`;
     formattedText += `• Akun #2: ${session.bacaKomen.account2}\n\n`;
+
+    if (session.bacaKomen.superThanks && session.bacaKomen.superThanks.length > 0) {
+      formattedText += `💖 *SUPER THANKS (${session.bacaKomen.superThanks.length})*\n`;
+      session.bacaKomen.superThanks.forEach((st, idx) => {
+        formattedText += `${idx + 1}. [${st.account || 'Akun'}] (${st.amount || 'N/A'}) - Link: ${st.url || '-'}\n`;
+      });
+      formattedText += `\n`;
+    }
   }
 
   formattedText += `🎯 *DAFTAR VIDEO SYUTING (${session.videos.length} Video)*\n`;
   formattedText += session.videos
     .map((item, index) => {
       const authorStr = item.author || extractUsernameFromUrl(item.url);
-      return `${index + 1}. [${authorStr}] [${formatDurationText(item.duration || 0)}] ${item.caption}`;
+      const postDateStr = item.postedAt || extractTikTokPostDate(item.url);
+      return `${index + 1}. [${authorStr}] [Post: ${postDateStr}] [${formatDurationText(item.duration || 0)}] ${item.caption}`;
     })
     .join("\n\n");
 
@@ -904,6 +1028,8 @@ window.copyHistorySession = async (historyId) => {
 };
 
 function renderHistory(historyDocs) {
+  if (!historyList) return;
+
   const filteredHistory = historyDocs.filter(h => 
     h.channel === activeChannel || (!h.channel && activeChannel === "adinoki")
   );
@@ -927,22 +1053,36 @@ function renderHistory(historyDocs) {
       }) + " WIB";
     }
 
+    let stHtml = '';
+    if (session.bacaKomen && session.bacaKomen.superThanks && session.bacaKomen.superThanks.length > 0) {
+      stHtml = `
+        <div class="pt-1.5 border-t border-amber-200/60 mt-1 space-y-1">
+          <p class="font-bold text-amber-900">💖 Super Thanks (${session.bacaKomen.superThanks.length}):</p>
+          ${session.bacaKomen.superThanks.map(st => `
+            <p class="text-neutral-700 pl-2">• <strong>${escapeHtml(st.account || 'Akun')}</strong> (${escapeHtml(st.amount || '-')}) : <a href="${escapeHtml(st.url || '#')}" target="_blank" class="text-orange-600 hover:underline">${escapeHtml(st.url || '-')}</a></p>
+          `).join('')}
+        </div>
+      `;
+    }
+
     const bacaKomenHtml = session.bacaKomen && session.bacaKomen.ytUrl ? `
       <div class="bg-amber-50/80 border border-amber-200 p-3 rounded-xl text-xs space-y-1 w-full">
         <p class="font-bold text-amber-900 flex items-center gap-1">💬 Baca Komen YouTube:</p>
         <p class="text-neutral-700 truncate"><strong>Link:</strong> <a href="${session.bacaKomen.ytUrl}" target="_blank" class="text-orange-600 hover:underline">${session.bacaKomen.ytUrl}</a></p>
         <p class="text-neutral-700"><strong>Akun #1:</strong> ${escapeHtml(session.bacaKomen.account1)} | <strong>Akun #2:</strong> ${escapeHtml(session.bacaKomen.account2)}</p>
+        ${stHtml}
       </div>
     ` : '';
 
     const videosHtml = (session.videos || []).map((v, vIdx) => `
       <div class="bg-white border border-neutral-200 p-3.5 rounded-2xl flex gap-3 items-center shadow-2xs w-full min-w-0">
-        ${v.thumbnail ? `<img src="${v.thumbnail}" class="w-14 h-20 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200" />` : ''}
+        ${v.thumbnail ? `<img src="${v.thumbnail}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://placehold.co/160x200/f5f5f5/a3a3a3?text=Gambar+Expired';" class="w-14 h-20 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200" />` : ''}
         <div class="flex-1 min-w-0 space-y-1">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-xs font-bold text-orange-600">#${vIdx + 1}</span>
-            <span class="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-bold max-w-[100px] truncate">👤 ${v.author || "Akun"}</span>
-            <span class="text-xs bg-neutral-100 text-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200 font-semibold truncate max-w-[80px]">🏷️ ${v.category || "Lainnya"}</span>
+            <span class="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-bold max-w-[100px] truncate">👤 ${escapeHtml(v.author || "Akun")}</span>
+            <span class="text-xs bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200 font-bold">📅 ${v.postedAt || extractTikTokPostDate(v.url)}</span>
+            <span class="text-xs bg-neutral-100 text-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200 font-semibold truncate max-w-[80px]">🏷️ ${escapeHtml(v.category || "Lainnya")}</span>
             <span class="text-xs bg-neutral-900 text-white px-1.5 py-0.5 rounded font-bold">⏱️ ${formatDurationText(v.duration || 0)}</span>
           </div>
           <p class="text-xs sm:text-sm text-neutral-800 line-clamp-2 font-bold break-words">${escapeHtml(v.caption)}</p>
@@ -1004,46 +1144,51 @@ window.toggleCaption = (id) => {
   }
 };
 
-window.openEditModal = (id, currentCaption, currentCategory, currentDurationSec) => {
+window.openEditModal = (id) => {
+  const item = allRawVideos.find(v => v.id === id);
+  if (!item) return;
+
   activeEditId = id;
-  modalCaptionInput.value = currentCaption;
-  modalCategoryInput.value = currentCategory || "Lainnya";
-  modalDurationInput.value = secondsToFormatInput(currentDurationSec);
-  editModal.classList.remove("hidden");
+  if (modalCaptionInput) modalCaptionInput.value = item.caption || "";
+  if (modalCategoryInput) modalCategoryInput.value = item.category || "Lainnya";
+  if (modalDurationInput) modalDurationInput.value = secondsToFormatInput(item.duration || 0);
+  if (editModal) editModal.classList.remove("hidden");
 };
 
 const closeModal = () => {
-  editModal.classList.add("hidden");
+  if (editModal) editModal.classList.add("hidden");
   activeEditId = null;
 };
 
-btnCancelEdit.addEventListener("click", closeModal);
-btnCloseModalX.addEventListener("click", closeModal);
+if (btnCancelEdit) btnCancelEdit.addEventListener("click", closeModal);
+if (btnCloseModalX) btnCloseModalX.addEventListener("click", closeModal);
 
-btnSaveEdit.addEventListener("click", async () => {
-  if (!activeEditId) return;
-  const newCaption = modalCaptionInput.value.trim();
-  const newCategory = modalCategoryInput.value.trim() || "Lainnya";
-  const rawDuration = modalDurationInput.value.trim();
-  const parsedSeconds = parseDurationToSeconds(rawDuration);
+if (btnSaveEdit) {
+  btnSaveEdit.addEventListener("click", async () => {
+    if (!activeEditId) return;
+    const newCaption = modalCaptionInput.value.trim();
+    const newCategory = modalCategoryInput.value.trim() || "Lainnya";
+    const rawDuration = modalDurationInput.value.trim();
+    const parsedSeconds = parseDurationToSeconds(rawDuration);
 
-  if (!rawDuration || parsedSeconds <= 0) {
-    return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid! Contoh: 45 atau 1.25");
-  }
+    if (!rawDuration || parsedSeconds <= 0) {
+      return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid! Contoh: 45 atau 1.25");
+    }
 
-  try {
-    const docRef = doc(db, "videos", activeEditId);
-    await updateDoc(docRef, { 
-      caption: newCaption,
-      category: newCategory,
-      duration: parsedSeconds
-    });
-    closeModal();
-  } catch (error) {
-    console.error("Gagal mengupdate video:", error);
-    showCustomAlert("Gagal Simpan", "Gagal menyimpan perubahan ke Firestore.");
-  }
-});
+    try {
+      const docRef = doc(db, "videos", activeEditId);
+      await updateDoc(docRef, { 
+        caption: newCaption,
+        category: newCategory,
+        duration: parsedSeconds
+      });
+      closeModal();
+    } catch (error) {
+      console.error("Gagal mengupdate video:", error);
+      showCustomAlert("Gagal Simpan", "Gagal menyimpan perubahan ke Firestore.");
+    }
+  });
+}
 
 window.toggleStatus = async (id, newStatus) => {
   const docRef = doc(db, "videos", id);
@@ -1079,14 +1224,10 @@ window.deleteItem = async (id) => {
 
 function escapeHtml(str) {
   if (!str) return "";
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function escapeModalText(str) {
-  if (!str) return "";
-  return str
-    .replace(/\\/g, "\\\\")
-    .replace(/`/g, "\\`")
-    .replace(/\$/g, "\\$")
-    .replace(/\n/g, "\\n");
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
