@@ -399,6 +399,7 @@ onSnapshot(bacaKomenRef, (snapshot) => {
 if (tabAdinoki) tabAdinoki.addEventListener("click", () => switchChannel("adinoki"));
 if (tabReaction) tabReaction.addEventListener("click", () => switchChannel("reaction"));
 
+// PEMBEDAAN WARNA MENU & BACKGROUND CHANNEL
 function switchChannel(channel) {
   activeChannel = channel;
   hasCopiedSyuting = false;
@@ -406,14 +407,24 @@ function switchChannel(channel) {
   selectedAccount = "Semua";
 
   if (activeChannel === "adinoki") {
-    if (tabAdinoki) tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
+    // 🟠 TEMA ORANYE UNTUK YT ADINOKI
+    document.body.style.backgroundColor = "#fffbf5";
+    if (tabAdinoki) tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-100/80 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer shadow-2xs";
     if (tabReaction) tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
-    if (activeChannelBadge) activeChannelBadge.innerText = "TARGET: YT ADINOKI";
+    if (activeChannelBadge) {
+      activeChannelBadge.innerText = "TARGET: YT ADINOKI";
+      activeChannelBadge.className = "text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-lg bg-orange-600 text-white tracking-wider shadow-2xs";
+    }
     if (historySubTitle) historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki";
   } else {
-    if (tabReaction) tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
+    // 🟣 TEMA UNGU UNTUK YT ADINOKI REACTION
+    document.body.style.backgroundColor = "#fcf5ff";
+    if (tabReaction) tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-purple-600 text-purple-700 bg-purple-100/80 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer shadow-2xs";
     if (tabAdinoki) tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
-    if (activeChannelBadge) activeChannelBadge.innerText = "TARGET: YT ADINOKI REACTION";
+    if (activeChannelBadge) {
+      activeChannelBadge.innerText = "TARGET: YT ADINOKI REACTION";
+      activeChannelBadge.className = "text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-lg bg-purple-700 text-white tracking-wider shadow-2xs";
+    }
     if (historySubTitle) historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki Reaction";
   }
 
@@ -614,15 +625,19 @@ function renderApp(items) {
     const b2Count = currentSyutingItems.filter(i => (i.batch || 1) === 2).length;
     const b3Count = currentSyutingItems.filter(i => (i.batch || 1) === 3).length;
 
+    const activeBtnClass = activeChannel === "adinoki" 
+      ? "bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-xs" 
+      : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs";
+
     batchTabsContainer.innerHTML = `
       <div class="flex items-center gap-1.5 bg-neutral-100 p-1.5 rounded-2xl mb-4 border border-neutral-200/80">
-        <button onclick="switchBatch(1)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 1 ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-xs' : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
+        <button onclick="switchBatch(1)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 1 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
           🎬 Sesi #1 <span class="${activeBatch === 1 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700'} text-[11px] px-1.5 py-0.2 rounded-full">${b1Count}</span>
         </button>
-        <button onclick="switchBatch(2)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 2 ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-xs' : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
+        <button onclick="switchBatch(2)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 2 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
           🎬 Sesi #2 <span class="${activeBatch === 2 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700'} text-[11px] px-1.5 py-0.2 rounded-full">${b2Count}</span>
         </button>
-        <button onclick="switchBatch(3)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 3 ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-xs' : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
+        <button onclick="switchBatch(3)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 3 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
           🎬 Sesi #3 <span class="${activeBatch === 3 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700'} text-[11px] px-1.5 py-0.2 rounded-full">${b3Count}</span>
         </button>
       </div>
@@ -650,19 +665,23 @@ function renderApp(items) {
         const itemDurationSec = item.duration || 0;
         const itemDurationFormatted = formatDurationText(itemDurationSec);
 
+        const numBadgeClass = activeChannel === "adinoki" 
+          ? "bg-gradient-to-r from-orange-500 to-red-600 text-white" 
+          : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white";
+
         return `
-          <div data-id="${item.id}" class="bg-white border border-neutral-200/90 hover:border-orange-300 transition-all p-4 rounded-2xl flex flex-row gap-4 items-start shadow-2xs w-full min-w-0 box-border">
+          <div data-id="${item.id}" class="bg-white border border-neutral-200/90 hover:border-neutral-300 transition-all p-4 rounded-2xl flex flex-row gap-4 items-start shadow-2xs w-full min-w-0 box-border">
             ${imgHtml}
             <div class="flex-1 space-y-2.5 min-w-0 flex flex-col justify-between self-stretch">
               
               <div class="space-y-2 w-full min-w-0">
                 <div class="flex flex-wrap items-center justify-between gap-1.5 w-full min-w-0">
                   <div class="flex flex-wrap items-center gap-1.5 min-w-0">
-                    <div class="drag-handle cursor-grab active:cursor-grabbing text-neutral-400 hover:text-orange-600 px-1.5 py-0.5 rounded border border-neutral-200 bg-white text-xs font-bold transition-colors flex items-center gap-1" title="Geser urutan">
+                    <div class="drag-handle cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200 bg-white text-xs font-bold transition-colors flex items-center gap-1" title="Geser urutan">
                       <span>⋮⋮</span>
                       <span class="text-[10px] text-neutral-500 font-normal">Geser</span>
                     </div>
-                    <span class="bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-black px-2 py-0.5 rounded-full shadow-2xs">
+                    <span class="${numBadgeClass} text-xs font-black px-2 py-0.5 rounded-full shadow-2xs">
                       #${index + 1}
                     </span>
                     <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-md border border-blue-200/80 font-bold max-w-[100px] sm:max-w-[140px] truncate" title="${escapeHtml(authorTag)}">
@@ -721,13 +740,13 @@ function renderBankList() {
     <div class="flex items-center gap-1 bg-neutral-200/80 p-1 rounded-xl mr-2 flex-shrink-0">
       <button 
         onclick="setFilterMode('category')" 
-        class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${filterMode === 'category' ? 'bg-white text-orange-600 shadow-2xs' : 'text-neutral-600 hover:text-black'}"
+        class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${filterMode === 'category' ? 'bg-white text-neutral-900 shadow-2xs' : 'text-neutral-600 hover:text-black'}"
       >
         🏷️ Kategori
       </button>
       <button 
         onclick="setFilterMode('account')" 
-        class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${filterMode === 'account' ? 'bg-white text-orange-600 shadow-2xs' : 'text-neutral-600 hover:text-black'}"
+        class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${filterMode === 'account' ? 'bg-white text-neutral-900 shadow-2xs' : 'text-neutral-600 hover:text-black'}"
       >
         👤 Akun
       </button>
@@ -735,11 +754,14 @@ function renderBankList() {
   `;
 
   const activeList = filterMode === "category" ? categoriesInBank : accountsInBank;
+  const activeTabClass = activeChannel === "adinoki" 
+    ? "bg-gradient-to-r from-orange-500 to-red-600 text-white font-black shadow-xs" 
+    : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black shadow-xs";
 
   const tabsHtml = activeList.map(item => {
     const isSelected = filterMode === "category" ? item === selectedCategory : item === selectedAccount;
     const activeClass = isSelected 
-      ? "bg-gradient-to-r from-orange-500 to-red-600 text-white font-black shadow-xs" 
+      ? activeTabClass 
       : "bg-neutral-100 text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 font-medium";
 
     let count = 0;
@@ -777,6 +799,10 @@ function renderBankList() {
     listBank.innerHTML = `<p class="text-neutral-400 text-sm text-center py-10">Tidak ada video di ${filterMode === "category" ? "kategori" : "akun"} <strong>${escapeHtml(activeLabel)}</strong></p>`;
     return;
   }
+
+  const addBtnClass = activeChannel === "adinoki"
+    ? "bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
+    : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white";
 
   listBank.innerHTML = filteredBank.map((item) => {
     const imgHtml = item.thumbnail 
@@ -824,7 +850,7 @@ function renderBankList() {
           <div class="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-neutral-100 w-full min-w-0 mt-auto flex-wrap gap-2">
             <a href="${item.url}" target="_blank" class="text-neutral-700 hover:text-black font-bold">Buka TikTok ↗</a>
             <div class="space-x-2 flex items-center ml-auto">
-              <button onclick="toggleStatus('${item.id}', 'syuting')" class="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs active:scale-95 transition-all">+ Sesi #${activeBatch}</button>
+              <button onclick="toggleStatus('${item.id}', 'syuting')" class="${addBtnClass} px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm shadow-xs active:scale-95 transition-all">+ Sesi #${activeBatch}</button>
               <button onclick="openEditModal('${item.id}')" class="text-neutral-500 hover:text-neutral-900 font-semibold">Edit</button>
               <button onclick="deleteItem('${item.id}')" class="text-red-600 hover:text-red-700 font-semibold">Hapus</button>
             </div>
