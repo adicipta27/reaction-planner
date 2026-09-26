@@ -140,6 +140,65 @@ function extractUsernameFromUrl(url) {
   return match ? `@${match[1]}` : "Akun TikTok";
 }
 
+// MULTI-PROVIDER FETCH METADATA TIKTOK (Bypass CORS & Cloudflare Block)
+async function fetchTikTokMetadata(url) {
+  const encodedUrl = encodeURIComponent(url);
+
+  // Jalur 1: TikWM Public API
+  try {
+    const res = await fetch(`https://www.tikwm.com/api/?url=${encodedUrl}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.code === 0 && json.data) {
+        return {
+          title: json.data.title || "",
+          thumbnail: json.data.cover || json.data.origin_cover || "",
+          author: json.data.author?.unique_id ? `@${json.data.author.unique_id}` : extractUsernameFromUrl(url)
+        };
+      }
+    }
+  } catch (e) {
+    console.warn("Jalur TikWM gagal, mencoba proxy cadangan...", e);
+  }
+
+  // Jalur 2: TikTok oEmbed via CorsProxy
+  try {
+    const targetUrl = `https://www.tiktok.com/oembed?url=${encodedUrl}`;
+    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        title: data.title || "",
+        thumbnail: data.thumbnail_url || "",
+        author: data.author_name ? `@${data.author_name}` : extractUsernameFromUrl(url)
+      };
+    }
+  } catch (e) {
+    console.warn("Jalur CorsProxy gagal, mencoba AllOrigins...", e);
+  }
+
+  // Jalur 3: TikTok oEmbed via AllOrigins
+  try {
+    const targetUrl = `https://www.tiktok.com/oembed?url=${encodedUrl}`;
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.contents) {
+        const data = JSON.parse(json.contents);
+        return {
+          title: data.title || "",
+          thumbnail: data.thumbnail_url || "",
+          author: data.author_name ? `@${data.author_name}` : extractUsernameFromUrl(url)
+        };
+      }
+    }
+  } catch (e) {
+    console.warn("Semua proxy fetch gagal...", e);
+  }
+
+  throw new Error("Semua jalur pemicu gagal mengambil data.");
+}
+
 // ENTER UNTUK SIMPAN
 [tiktokUrlInput, tiktokDurationInput, tiktokCategoryInput, tiktokCaptionInput].forEach(input => {
   if (input) {
@@ -472,13 +531,10 @@ if (btnFetch) {
     btnFetch.disabled = true;
 
     try {
-      const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-      if (!response.ok) throw new Error("Gagal mengambil data TikTok");
-      
-      const data = await response.json();
-      tiktokCaptionInput.value = data.title || "Gagal mendapatkan caption otomatis.";
-      currentThumbnail = data.thumbnail_url || "";
-      currentAuthor = data.author_name ? `@${data.author_name}` : extractUsernameFromUrl(url);
+      const data = await fetchTikTokMetadata(url);
+      tiktokCaptionInput.value = data.title || "Tanpa caption";
+      currentThumbnail = data.thumbnail || "";
+      currentAuthor = data.author || extractUsernameFromUrl(url);
     } catch (error) {
       currentAuthor = extractUsernameFromUrl(url);
       showCustomAlert("Gagal Ambil Data", "Gagal mengambil data otomatis. Kamu tetap bisa mengetik caption manual.");
@@ -508,15 +564,12 @@ if (btnSave) {
 
     if (!thumbnailToSave) {
       try {
-        const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-        if (response.ok) {
-          const data = await response.json();
-          thumbnailToSave = data.thumbnail_url || "";
-          if (data.author_name) authorToSave = `@${data.author_name}`;
-          if (!caption) tiktokCaptionInput.value = data.title || "Tanpa caption";
-        }
+        const data = await fetchTikTokMetadata(url);
+        thumbnailToSave = data.thumbnail || "";
+        if (data.author) authorToSave = data.author;
+        if (!caption && data.title) tiktokCaptionInput.value = data.title;
       } catch (e) {
-        console.log("Gagal fetch thumbnail:", e);
+        console.log("Gagal fetch metadata saat simpan:", e);
       }
     }
 
@@ -1085,7 +1138,7 @@ function renderHistory(historyDocs) {
         <div class="pt-1.5 border-t border-amber-200/60 mt-1 space-y-1">
           <p class="font-bold text-amber-900">💖 Super Thanks (${session.bacaKomen.superThanks.length}):</p>
           ${session.bacaKomen.superThanks.map(st => `
-            <p class="text-neutral-700 pl-2">• <strong>${escapeHtml(st.account || 'Akun')}</strong> (${escapeHtml(st.amount || '-')}) : <a href="${escapeHtml(st.url || '#')}" target="_blank" class="text-orange-600 hover:underline">${escapeHtml(st.url || '-')}</a></p>
+            <p class="text-neutral-700 pl-2">• <strong>${escapeHtml(st.account \vert{}\vert{} 'Akun')}</strong> (${escapeHtml(st.amount || '-')}) : <a href="${escapeHtml(st.url \vert{}\vert{} '#')}" target="_blank" class="text-orange-600 hover:underline">${escapeHtml(st.url || '-')}</a></p>
           `).join('')}
         </div>
       `;
