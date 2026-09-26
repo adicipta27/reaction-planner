@@ -59,7 +59,7 @@ const btnScrollRight = document.getElementById("btnScrollRight");
 const totalYtDuration = document.getElementById("totalYtDuration");
 const badgeTikTokSum = document.getElementById("badgeTikTokSum");
 
-// Elemen DOM Baca Komen & Super Thanks Modal
+// Elemen DOM Baca Komen & Super Thanks
 const btnOpenBacaKomen = document.getElementById("btnOpenBacaKomen");
 const badgeBacaKomenStatus = document.getElementById("badgeBacaKomenStatus");
 const bacaKomenModal = document.getElementById("bacaKomenModal");
@@ -111,7 +111,17 @@ let selectedCategory = "Semua";
 let selectedAccount = "Semua";
 let hasCopiedSyuting = false;
 
-// HELPER: Ekstrak Tanggal Posting Otomatis dari ID Video TikTok
+// HELPER FUNCTIONS
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function extractTikTokPostDate(url) {
   if (!url) return "Tgl Post N/A";
   try {
@@ -138,11 +148,9 @@ function extractUsernameFromUrl(url) {
   return match ? `@${match[1]}` : "Akun TikTok";
 }
 
-// MULTI-PROVIDER FETCH METADATA TIKTOK
 async function fetchTikTokMetadata(url) {
   const encodedUrl = encodeURIComponent(url);
 
-  // Jalur 1: TikWM Public API
   try {
     const res = await fetch(`https://www.tikwm.com/api/?url=${encodedUrl}`);
     if (res.ok) {
@@ -156,10 +164,9 @@ async function fetchTikTokMetadata(url) {
       }
     }
   } catch (e) {
-    console.warn("Jalur TikWM gagal, mencoba proxy cadangan...", e);
+    console.warn("TikWM Gagal, coba proxy...", e);
   }
 
-  // Jalur 2: TikTok oEmbed via CorsProxy
   try {
     const targetUrl = `https://www.tiktok.com/oembed?url=${encodedUrl}`;
     const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
@@ -172,77 +179,10 @@ async function fetchTikTokMetadata(url) {
       };
     }
   } catch (e) {
-    console.warn("Jalur CorsProxy gagal, mencoba AllOrigins...", e);
+    console.warn("CorsProxy Gagal...", e);
   }
 
-  // Jalur 3: TikTok oEmbed via AllOrigins
-  try {
-    const targetUrl = `https://www.tiktok.com/oembed?url=${encodedUrl}`;
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
-    if (res.ok) {
-      const json = await res.json();
-      if (json.contents) {
-        const data = JSON.parse(json.contents);
-        return {
-          title: data.title || "",
-          thumbnail: data.thumbnail_url || "",
-          author: data.author_name ? `@${data.author_name}` : extractUsernameFromUrl(url)
-        };
-      }
-    }
-  } catch (e) {
-    console.warn("Semua proxy fetch gagal...", e);
-  }
-
-  throw new Error("Semua jalur fetch gagal mengambil data.");
-}
-
-// ENTER UNTUK SIMPAN
-[tiktokUrlInput, tiktokDurationInput, tiktokCategoryInput, tiktokCaptionInput].forEach(input => {
-  if (input) {
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (btnSave) btnSave.click();
-      }
-    });
-  }
-});
-
-// Event Listener Scroll Kategori
-if (btnScrollLeft && btnScrollRight && categoryTabs) {
-  btnScrollLeft.addEventListener("click", () => {
-    categoryTabs.scrollBy({ left: -220, behavior: "smooth" });
-  });
-  btnScrollRight.addEventListener("click", () => {
-    categoryTabs.scrollBy({ left: 220, behavior: "smooth" });
-  });
-}
-
-// DRAG & DROP SAFE INIT
-if (listSyuting && typeof Sortable !== "undefined") {
-  try {
-    Sortable.create(listSyuting, {
-      animation: 200,
-      handle: ".drag-handle",
-      ghostClass: "opacity-40",
-      onEnd: async () => {
-        const cardElements = listSyuting.querySelectorAll("[data-id]");
-        const updatePromises = Array.from(cardElements).map((el, newIndex) => {
-          const docId = el.getAttribute("data-id");
-          return updateDoc(doc(db, "videos", docId), { order: newIndex });
-        });
-        try {
-          await Promise.all(updatePromises);
-        } catch (err) {
-          console.error("Gagal memperbarui urutan:", err);
-          showCustomAlert("Gagal Urutkan", "Terjadi kesalahan saat menyusun ulang urutan syuting.");
-        }
-      }
-    });
-  } catch (e) {
-    console.warn("Sortable JS Init Warning:", e);
-  }
+  throw new Error("Gagal mengambil metadata TikTok.");
 }
 
 function parseDurationToSeconds(val) {
@@ -318,7 +258,50 @@ if (btnCloseCustomAlert) {
   });
 }
 
-// LOGIKA BACA KOMEN & SUPER THANKS
+// ENTER UNTUK SIMPAN
+[tiktokUrlInput, tiktokDurationInput, tiktokCategoryInput, tiktokCaptionInput].forEach(input => {
+  if (input) {
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (btnSave) btnSave.click();
+      }
+    });
+  }
+});
+
+// SCROLL KATEGORI
+if (btnScrollLeft && btnScrollRight && categoryTabs) {
+  btnScrollLeft.addEventListener("click", () => categoryTabs.scrollBy({ left: -220, behavior: "smooth" }));
+  btnScrollRight.addEventListener("click", () => categoryTabs.scrollBy({ left: 220, behavior: "smooth" }));
+}
+
+// DRAG & DROP
+if (listSyuting && typeof Sortable !== "undefined") {
+  try {
+    Sortable.create(listSyuting, {
+      animation: 200,
+      handle: ".drag-handle",
+      ghostClass: "opacity-40",
+      onEnd: async () => {
+        const cardElements = listSyuting.querySelectorAll("[data-id]");
+        const updatePromises = Array.from(cardElements).map((el, newIndex) => {
+          const docId = el.getAttribute("data-id");
+          return updateDoc(doc(db, "videos", docId), { order: newIndex });
+        });
+        try {
+          await Promise.all(updatePromises);
+        } catch (err) {
+          console.error("Gagal memperbarui urutan:", err);
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("Sortable JS Init Warning:", e);
+  }
+}
+
+// BACA KOMEN
 function getBacaKomenKey() {
   return `${activeChannel}_batch_${activeBatch}`;
 }
@@ -502,16 +485,15 @@ if (btnPaste) {
   btnPaste.addEventListener("click", async () => {
     try {
       if (!navigator.clipboard || !navigator.clipboard.readText) {
-        return showCustomAlert("Fitur Tidak Didukung", "Browser tidak mendukung akses clipboard otomatis. Silakan tempel manual.");
+        return showCustomAlert("Fitur Tidak Didukung", "Browser tidak mendukung akses clipboard otomatis.");
       }
       const text = await navigator.clipboard.readText();
       if (text && text.trim()) {
         tiktokUrlInput.value = text.trim();
       } else {
-        showCustomAlert("Clipboard Kosong", "Tidak ada teks yang disalin di clipboard Anda.");
+        showCustomAlert("Clipboard Kosong", "Tidak ada teks yang disalin.");
       }
     } catch (err) {
-      console.error("Gagal membaca clipboard:", err);
       showCustomAlert("Izin Ditolak", "Gagal mengakses clipboard.");
     }
   });
@@ -532,7 +514,7 @@ if (btnFetch) {
       currentAuthor = data.author || extractUsernameFromUrl(url);
     } catch (error) {
       currentAuthor = extractUsernameFromUrl(url);
-      showCustomAlert("Gagal Ambil Data", "Gagal mengambil data otomatis. Kamu tetap bisa mengetik caption manual.");
+      showCustomAlert("Gagal Ambil Data", "Gagal mengambil data otomatis. Silakan ketik caption manual.");
     } finally {
       btnFetch.innerText = "Ambil Caption & Thumbnail";
       btnFetch.disabled = false;
@@ -550,7 +532,7 @@ if (btnSave) {
 
     if (!url) return showCustomAlert("Input Kosong!", "Link TikTok tidak boleh kosong!");
     if (!rawDuration || parsedSeconds <= 0) {
-      return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid! Contoh: 45 atau 1.25");
+      return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid!");
     }
 
     let thumbnailToSave = currentThumbnail;
@@ -564,7 +546,7 @@ if (btnSave) {
         if (data.author) authorToSave = data.author;
         if (!caption && data.title) tiktokCaptionInput.value = data.title;
       } catch (e) {
-        console.log("Gagal fetch metadata saat simpan:", e);
+        console.log("Fetch metadata fail on save:", e);
       }
     }
 
@@ -594,19 +576,18 @@ if (btnSave) {
       currentAuthor = "";
     } catch (error) {
       console.error("Gagal menyimpan data:", error);
-      showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat menyimpan data ke Firebase.");
+      showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat menyimpan ke Firestore.");
     }
   });
 }
 
-// AMBIL SEMUA DATA VIDEOS TANPA QUERY ORDERBY (Aman untuk Data Lama)
+// REALTIME LISTENER VIDEOS
 onSnapshot(videosRef, (snapshot) => {
   allRawVideos = [];
   snapshot.forEach((doc) => {
     allRawVideos.push({ id: doc.id, ...doc.data() });
   });
 
-  // Urutkan berdasarkan createdAt di JavaScript
   allRawVideos.sort((a, b) => {
     const tA = a.createdAt?.seconds || 0;
     const tB = b.createdAt?.seconds || 0;
@@ -681,16 +662,25 @@ function renderApp(items) {
       ? "bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-xs" 
       : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs";
 
+    const b1Class = activeBatch === 1 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60';
+    const b1Span = activeBatch === 1 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700';
+
+    const b2Class = activeBatch === 2 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60';
+    const b2Span = activeBatch === 2 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700';
+
+    const b3Class = activeBatch === 3 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60';
+    const b3Span = activeBatch === 3 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700';
+
     batchTabsContainer.innerHTML = `
       <div class="flex items-center gap-1.5 bg-neutral-100 p-1.5 rounded-2xl mb-4 border border-neutral-200/80">
-        <button onclick="switchBatch(1)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 1 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
-          🎬 Sesi #1 <span class="${activeBatch === 1 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700'} text-[11px] px-1.5 py-0.2 rounded-full">${b1Count}</span>
+        <button onclick="switchBatch(1)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${b1Class}">
+          🎬 Sesi #1 <span class="${b1Span} text-[11px] px-1.5 py-0.2 rounded-full">${b1Count}</span>
         </button>
-        <button onclick="switchBatch(2)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 2 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
-          🎬 Sesi #2 <span class="${activeBatch === 2 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700'} text-[11px] px-1.5 py-0.2 rounded-full">${b2Count}</span>
+        <button onclick="switchBatch(2)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${b2Class}">
+          🎬 Sesi #2 <span class="${b2Span} text-[11px] px-1.5 py-0.2 rounded-full">${b2Count}</span>
         </button>
-        <button onclick="switchBatch(3)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${activeBatch === 3 ? activeBtnClass : 'text-neutral-600 hover:text-black hover:bg-neutral-200/60'}">
-          🎬 Sesi #3 <span class="${activeBatch === 3 ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700'} text-[11px] px-1.5 py-0.2 rounded-full">${b3Count}</span>
+        <button onclick="switchBatch(3)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${b3Class}">
+          🎬 Sesi #3 <span class="${b3Span} text-[11px] px-1.5 py-0.2 rounded-full">${b3Count}</span>
         </button>
       </div>
     `;
@@ -1033,10 +1023,10 @@ if (btnActionConfirm) {
       hasCopiedSyuting = false;
       updateSelesaiBtnState();
 
-      showCustomAlert("Syuting Selesai! 🎉", `Sesi #${activeBatch} telah dipindahkan ke Riwayat. Estimasi durasi edit: ${ytCalc.formatted}.`);
+      showCustomAlert("Syuting Selesai! 🎉", `Sesi #${activeBatch} telah dipindahkan ke Riwayat.`);
     } catch (error) {
       console.error("Gagal memindahkan ke riwayat:", error);
-      showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat memindahkan ke riwayat syuting.");
+      showCustomAlert("Gagal Menyimpan", "Terjadi kesalahan saat memindahkan ke riwayat.");
     }
   });
 }
@@ -1053,14 +1043,13 @@ if (btnCloseHistoryModal) {
   });
 }
 
-// AMBIL SEMUA RIWAYAT TANPA QUERY ORDERBY (Aman untuk Data Lama)
+// REALTIME LISTENER HISTORY
 onSnapshot(historyRef, (snapshot) => {
   allRawHistory = [];
   snapshot.forEach((doc) => {
     allRawHistory.push({ id: doc.id, ...doc.data() });
   });
 
-  // Urutkan berdasarkan completedAt di JavaScript
   allRawHistory.sort((a, b) => {
     const tA = a.completedAt?.seconds || 0;
     const tB = b.completedAt?.seconds || 0;
@@ -1103,10 +1092,10 @@ window.copyHistorySession = async (historyId) => {
 
   try {
     await navigator.clipboard.writeText(formattedText);
-    showCustomAlert("Berhasil Disalin! 📋", "Poin-poin video dari riwayat ini berhasil disalin ke clipboard Anda.");
+    showCustomAlert("Berhasil Disalin! 📋", "Poin-poin video berhasil disalin ke clipboard Anda.");
   } catch (error) {
     console.error("Gagal menyalin teks:", error);
-    showCustomAlert("Gagal Menyalin", "Gagal mengakses clipboard. Silakan coba lagi.");
+    showCustomAlert("Gagal Menyalin", "Gagal mengakses clipboard.");
   }
 };
 
@@ -1137,49 +1126,73 @@ function renderHistory(historyDocs) {
     }
 
     let stHtml = '';
-    if (session.bacaKomen && session.bacaKomen.superThanks && session.bacaKomen.superThanks.length > 0) {
+    if (session.bacaKomen && Array.isArray(session.bacaKomen.superThanks) && session.bacaKomen.superThanks.length > 0) {
+      const stItems = session.bacaKomen.superThanks.map(st => {
+        const acc = escapeHtml(st.account || 'Akun');
+        const amt = escapeHtml(st.amount || '-');
+        const url = escapeHtml(st.url || '#');
+        return `<p class="text-neutral-700 pl-2">• <strong>${acc}</strong> (${amt}) : <a href="${url}" target="_blank" class="text-orange-600 hover:underline">${url}</a></p>`;
+      }).join('');
+
       stHtml = `
         <div class="pt-1.5 border-t border-amber-200/60 mt-1 space-y-1">
           <p class="font-bold text-amber-900">💖 Super Thanks (${session.bacaKomen.superThanks.length}):</p>
-          ${session.bacaKomen.superThanks.map(st => `
-            <p class="text-neutral-700 pl-2">• <strong>${escapeHtml(st.account \vert{}\vert{} 'Akun')}</strong> (${escapeHtml(st.amount || '-')}) : <a href="${escapeHtml(st.url \vert{}\vert{} '#')}" target="_blank" class="text-orange-600 hover:underline">${escapeHtml(st.url || '-')}</a></p>
-          `).join('')}
+          ${stItems}
         </div>
       `;
     }
 
-    const bacaKomenHtml = session.bacaKomen && session.bacaKomen.ytUrl ? `
-      <div class="bg-amber-50/80 border border-amber-200 p-3 rounded-xl text-xs space-y-1 w-full">
-        <p class="font-bold text-amber-900 flex items-center gap-1">💬 Baca Komen YouTube:</p>
-        <p class="text-neutral-700 truncate"><strong>Link:</strong> <a href="${session.bacaKomen.ytUrl}" target="_blank" class="text-orange-600 hover:underline">${session.bacaKomen.ytUrl}</a></p>
-        <p class="text-neutral-700"><strong>Akun #1:</strong> ${escapeHtml(session.bacaKomen.account1)} | <strong>Akun #2:</strong> ${escapeHtml(session.bacaKomen.account2)}</p>
-        ${stHtml}
-      </div>
-    ` : '';
+    let bacaKomenHtml = '';
+    if (session.bacaKomen && session.bacaKomen.ytUrl) {
+      const ytUrl = escapeHtml(session.bacaKomen.ytUrl);
+      const acc1 = escapeHtml(session.bacaKomen.account1);
+      const acc2 = escapeHtml(session.bacaKomen.account2);
 
-    const videosHtml = (session.videos || []).map((v, vIdx) => `
-      <div class="bg-white border border-neutral-200 p-3.5 rounded-2xl flex gap-3 items-center shadow-2xs w-full min-w-0">
-        ${v.thumbnail ? `<img src="${v.thumbnail}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://placehold.co/160x200/f5f5f5/a3a3a3?text=Gambar+Expired';" class="w-14 h-20 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200" />` : ''}
-        <div class="flex-1 min-w-0 space-y-1">
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-xs font-bold text-orange-600">#${vIdx + 1}</span>
-            <span class="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-bold max-w-[100px] truncate">👤 ${escapeHtml(v.author || "Akun")}</span>
-            <span class="text-xs bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200 font-bold">📅 ${v.postedAt || extractTikTokPostDate(v.url)}</span>
-            <span class="text-xs bg-neutral-100 text-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200 font-semibold truncate max-w-[80px]">🏷️ ${escapeHtml(v.category || "Lainnya")}</span>
-            <span class="text-xs bg-neutral-900 text-white px-1.5 py-0.5 rounded font-bold">⏱️ ${formatDurationText(v.duration || 0)}</span>
-          </div>
-          <p class="text-xs sm:text-sm text-neutral-800 line-clamp-2 font-bold break-words">${escapeHtml(v.caption)}</p>
-          <a href="${v.url}" target="_blank" class="text-xs text-orange-600 hover:underline inline-block font-bold">Buka TikTok ↗</a>
+      bacaKomenHtml = `
+        <div class="bg-amber-50/80 border border-amber-200 p-3 rounded-xl text-xs space-y-1 w-full">
+          <p class="font-bold text-amber-900 flex items-center gap-1">💬 Baca Komen YouTube:</p>
+          <p class="text-neutral-700 truncate"><strong>Link:</strong> <a href="${ytUrl}" target="_blank" class="text-orange-600 hover:underline">${ytUrl}</a></p>
+          <p class="text-neutral-700"><strong>Akun #1:</strong> ${acc1} | <strong>Akun #2:</strong> ${acc2}</p>
+          ${stHtml}
         </div>
-      </div>
-    `).join("");
+      `;
+    }
+
+    const videosHtml = (session.videos || []).map((v, vIdx) => {
+      const authorStr = escapeHtml(v.author || "Akun");
+      const postDateStr = v.postedAt || extractTikTokPostDate(v.url);
+      const catStr = escapeHtml(v.category || "Lainnya");
+      const capStr = escapeHtml(v.caption);
+      const durationFormatted = formatDurationText(v.duration || 0);
+
+      const imgEl = v.thumbnail 
+        ? `<img src="${v.thumbnail}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://placehold.co/160x200/f5f5f5/a3a3a3?text=Gambar+Expired';" class="w-14 h-20 object-cover rounded-xl flex-shrink-0 bg-neutral-100 border border-neutral-200" />` 
+        : '';
+
+      return `
+        <div class="bg-white border border-neutral-200 p-3.5 rounded-2xl flex gap-3 items-center shadow-2xs w-full min-w-0">
+          ${imgEl}
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs font-bold text-orange-600">#${vIdx + 1}</span>
+              <span class="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-bold max-w-[100px] truncate">👤 ${authorStr}</span>
+              <span class="text-xs bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200 font-bold">📅 ${postDateStr}</span>
+              <span class="text-xs bg-neutral-100 text-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200 font-semibold truncate max-w-[80px]">🏷️ ${catStr}</span>
+              <span class="text-xs bg-neutral-900 text-white px-1.5 py-0.5 rounded font-bold">⏱️ ${durationFormatted}</span>
+            </div>
+            <p class="text-xs sm:text-sm text-neutral-800 line-clamp-2 font-bold break-words">${capStr}</p>
+            <a href="${v.url}" target="_blank" class="text-xs text-orange-600 hover:underline inline-block font-bold">Buka TikTok ↗</a>
+          </div>
+        </div>
+      `;
+    }).join("");
 
     return `
       <div class="bg-neutral-50 border border-neutral-200 p-4 sm:p-5 rounded-2xl space-y-3.5 shadow-2xs w-full min-w-0">
         <div class="flex justify-between items-center border-b border-neutral-200 pb-3 flex-wrap gap-2">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full">
-              ${session.batchName || "Sesi Syuting Selesai"}
+              ${escapeHtml(session.batchName || "Sesi Syuting Selesai")}
             </span>
             <span class="text-xs sm:text-sm font-bold text-neutral-800">📅 ${dateStr}</span>
           </div>
@@ -1208,7 +1221,7 @@ window.deleteHistorySession = async (historyId) => {
       await deleteDoc(doc(db, "history", historyId));
     } catch (e) {
       console.error("Gagal menghapus riwayat:", e);
-      showCustomAlert("Gagal Hapus", "Gagal menghapus sesi riwayat dari database.");
+      showCustomAlert("Gagal Hapus", "Gagal menghapus sesi riwayat.");
     }
   }
 };
@@ -1255,7 +1268,7 @@ if (btnSaveEdit) {
     const parsedSeconds = parseDurationToSeconds(rawDuration);
 
     if (!rawDuration || parsedSeconds <= 0) {
-      return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid! Contoh: 45 atau 1.25");
+      return showCustomAlert("Durasi Wajib!", "Masukkan durasi yang valid!");
     }
 
     try {
@@ -1280,7 +1293,7 @@ window.toggleStatus = async (id, newStatus) => {
     if (currentBatchItems.length >= 10) {
       showCustomAlert(
         "Sesi Penuh!", 
-        `Daftar Sesi #${activeBatch} sudah mencapai batas maksimal 10 video. Kembalikan beberapa video atau pindah ke sesi lain.`
+        `Daftar Sesi #${activeBatch} sudah mencapai batas maksimal 10 video.`
       );
       return;
     }
@@ -1304,13 +1317,3 @@ window.deleteItem = async (id) => {
     await deleteDoc(doc(db, "videos", id));
   }
 };
-
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
