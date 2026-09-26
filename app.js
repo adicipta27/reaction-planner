@@ -8,8 +8,6 @@ import {
   updateDoc, 
   deleteDoc, 
   setDoc,
-  query, 
-  orderBy, 
   serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/+esm";
@@ -33,7 +31,7 @@ const bacaKomenRef = collection(db, "baca_komen");
 
 // State
 let activeChannel = "adinoki"; 
-let activeBatch = 1; // Sesi 1, 2, atau 3
+let activeBatch = 1;
 
 // Elemen Tab Channel
 const tabAdinoki = document.getElementById("tabAdinoki");
@@ -140,7 +138,7 @@ function extractUsernameFromUrl(url) {
   return match ? `@${match[1]}` : "Akun TikTok";
 }
 
-// MULTI-PROVIDER FETCH METADATA TIKTOK (Bypass CORS & Cloudflare Block)
+// MULTI-PROVIDER FETCH METADATA TIKTOK
 async function fetchTikTokMetadata(url) {
   const encodedUrl = encodeURIComponent(url);
 
@@ -196,7 +194,7 @@ async function fetchTikTokMetadata(url) {
     console.warn("Semua proxy fetch gagal...", e);
   }
 
-  throw new Error("Semua jalur pemicu gagal mengambil data.");
+  throw new Error("Semua jalur fetch gagal mengambil data.");
 }
 
 // ENTER UNTUK SIMPAN
@@ -458,7 +456,6 @@ onSnapshot(bacaKomenRef, (snapshot) => {
 if (tabAdinoki) tabAdinoki.addEventListener("click", () => switchChannel("adinoki"));
 if (tabReaction) tabReaction.addEventListener("click", () => switchChannel("reaction"));
 
-// PEMBEDAAN WARNA MENU & BACKGROUND CHANNEL
 function switchChannel(channel) {
   activeChannel = channel;
   hasCopiedSyuting = false;
@@ -466,7 +463,6 @@ function switchChannel(channel) {
   selectedAccount = "Semua";
 
   if (activeChannel === "adinoki") {
-    // 🟠 TEMA ORANYE UNTUK YT ADINOKI
     document.body.style.backgroundColor = "#fffbf5";
     if (tabAdinoki) tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-100/80 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer shadow-2xs";
     if (tabReaction) tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
@@ -476,7 +472,6 @@ function switchChannel(channel) {
     }
     if (historySubTitle) historySubTitle.innerText = "Menampilkan riwayat untuk YT Adinoki";
   } else {
-    // 🟣 TEMA UNGU UNTUK YT ADINOKI REACTION
     document.body.style.backgroundColor = "#fcf5ff";
     if (tabReaction) tabReaction.className = "px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-purple-600 text-purple-700 bg-purple-100/80 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer shadow-2xs";
     if (tabAdinoki) tabAdinoki.className = "px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer";
@@ -604,11 +599,18 @@ if (btnSave) {
   });
 }
 
-const q = query(videosRef, orderBy("createdAt", "desc"));
-onSnapshot(q, (snapshot) => {
+// AMBIL SEMUA DATA VIDEOS TANPA QUERY ORDERBY (Aman untuk Data Lama)
+onSnapshot(videosRef, (snapshot) => {
   allRawVideos = [];
   snapshot.forEach((doc) => {
     allRawVideos.push({ id: doc.id, ...doc.data() });
+  });
+
+  // Urutkan berdasarkan createdAt di JavaScript
+  allRawVideos.sort((a, b) => {
+    const tA = a.createdAt?.seconds || 0;
+    const tB = b.createdAt?.seconds || 0;
+    return tB - tA;
   });
 
   renderApp(allRawVideos);
@@ -639,7 +641,6 @@ function calculateYtEditDuration(items) {
   };
 }
 
-// BATCH SWITCHER FUNCTION
 window.switchBatch = (batchNum) => {
   activeBatch = batchNum;
   hasCopiedSyuting = false;
@@ -647,7 +648,6 @@ window.switchBatch = (batchNum) => {
   updateBacaKomenUI();
 };
 
-// RENDER UTAMA
 function renderApp(items) {
   const channelFilteredItems = items.filter(item => 
     item.channel === activeChannel || (!item.channel && activeChannel === "adinoki")
@@ -671,7 +671,6 @@ function renderApp(items) {
     hasCopiedSyuting = false;
   }
 
-  // RENDER SESI SYUTING TABS
   const batchTabsContainer = document.getElementById("batchTabsContainer");
   if (batchTabsContainer) {
     const b1Count = currentSyutingItems.filter(i => (i.batch || 1) === 1).length;
@@ -697,7 +696,6 @@ function renderApp(items) {
     `;
   }
 
-  // RENDER SIAP SYUTING LIST
   if (listSyuting) {
     if (currentBatchItems.length === 0) {
       listSyuting.innerHTML = `<p class="text-neutral-400 text-sm text-center py-10 font-medium bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">Belum ada video untuk <strong>Sesi #${activeBatch}</strong>. Pilih dari Bank Video di bawah!</p>`;
@@ -779,7 +777,6 @@ function renderApp(items) {
   updateBacaKomenUI();
 }
 
-// RENDER BANK VIDEO
 function renderBankList() {
   if (!categoryTabs || !listBank) return;
 
@@ -1056,11 +1053,18 @@ if (btnCloseHistoryModal) {
   });
 }
 
-const qHistory = query(historyRef, orderBy("completedAt", "desc"));
-onSnapshot(qHistory, (snapshot) => {
+// AMBIL SEMUA RIWAYAT TANPA QUERY ORDERBY (Aman untuk Data Lama)
+onSnapshot(historyRef, (snapshot) => {
   allRawHistory = [];
   snapshot.forEach((doc) => {
     allRawHistory.push({ id: doc.id, ...doc.data() });
+  });
+
+  // Urutkan berdasarkan completedAt di JavaScript
+  allRawHistory.sort((a, b) => {
+    const tA = a.completedAt?.seconds || 0;
+    const tB = b.completedAt?.seconds || 0;
+    return tB - tA;
   });
 
   renderHistory(allRawHistory);
