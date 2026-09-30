@@ -33,6 +33,13 @@ const bacaKomenRef = collection(db, "baca_komen");
 let activeChannel = "adinoki"; 
 let activeBatch = 1;
 
+// State Kapasitas Slot Dinamis Per Sesi (Default awal 10 per sesi)
+let sessionSlots = {
+  1: 10,
+  2: 10,
+  3: 10
+};
+
 // Elemen Tab Channel
 const tabAdinoki = document.getElementById("tabAdinoki");
 const tabReaction = document.getElementById("tabReaction");
@@ -257,6 +264,15 @@ if (btnCloseCustomAlert) {
     if (customAlertModal) customAlertModal.classList.add("hidden");
   });
 }
+
+// FUNGSI TAMBAH SLOT DINAMIS
+window.tambahSlot = (jumlah = 1) => {
+  if (!sessionSlots[activeBatch]) {
+    sessionSlots[activeBatch] = 10;
+  }
+  sessionSlots[activeBatch] += jumlah;
+  renderApp(allRawVideos);
+};
 
 // ENTER UNTUK SIMPAN
 [tiktokUrlInput, tiktokDurationInput, tiktokCategoryInput, tiktokCaptionInput].forEach(input => {
@@ -641,7 +657,8 @@ function renderApp(items) {
   currentBatchItems = currentSyutingItems.filter(i => (i.batch || 1) === activeBatch);
   currentBankItems = channelFilteredItems.filter(i => i.status === "bank");
 
-  if (countSyuting) countSyuting.innerText = currentBatchItems.length;
+  const maxSlotNow = sessionSlots[activeBatch] || 10;
+  if (countSyuting) countSyuting.innerText = `${currentBatchItems.length} / ${maxSlotNow}`;
   if (countBank) countBank.innerText = currentBankItems.length;
 
   const ytCalc = calculateYtEditDuration(currentBatchItems);
@@ -674,13 +691,16 @@ function renderApp(items) {
     batchTabsContainer.innerHTML = `
       <div class="flex items-center gap-1.5 bg-neutral-100 p-1.5 rounded-2xl mb-4 border border-neutral-200/80">
         <button onclick="switchBatch(1)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${b1Class}">
-          🎬 Sesi #1 <span class="${b1Span} text-[11px] px-1.5 py-0.2 rounded-full">${b1Count}</span>
+          🎬 Sesi #1 <span class="${b1Span} text-[11px] px-1.5 py-0.2 rounded-full">${b1Count} / ${sessionSlots[1] || 10}</span>
         </button>
         <button onclick="switchBatch(2)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${b2Class}">
-          🎬 Sesi #2 <span class="${b2Span} text-[11px] px-1.5 py-0.2 rounded-full">${b2Count}</span>
+          🎬 Sesi #2 <span class="${b2Span} text-[11px] px-1.5 py-0.2 rounded-full">${b2Count} / ${sessionSlots[2] || 10}</span>
         </button>
         <button onclick="switchBatch(3)" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 ${b3Class}">
-          🎬 Sesi #3 <span class="${b3Span} text-[11px] px-1.5 py-0.2 rounded-full">${b3Count}</span>
+          🎬 Sesi #3 <span class="${b3Span} text-[11px] px-1.5 py-0.2 rounded-full">${b3Count} / ${sessionSlots[3] || 10}</span>
+        </button>
+        <button onclick="tambahSlot(1)" title="Tambah Kuota Slot Sesi Ini" class="py-2 px-3 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-600 text-white transition-all shadow-xs flex items-center gap-1 cursor-pointer">
+          ➕ Slot
         </button>
       </div>
     `;
@@ -1290,10 +1310,12 @@ window.toggleStatus = async (id, newStatus) => {
   const docRef = doc(db, "videos", id);
 
   if (newStatus === "syuting") {
-    if (currentBatchItems.length >= 10) {
+    const currentMaxSlot = sessionSlots[activeBatch] || 10;
+
+    if (currentBatchItems.length >= currentMaxSlot) {
       showCustomAlert(
-        "Sesi Penuh!", 
-        `Daftar Sesi #${activeBatch} sudah mencapai batas maksimal 10 video.`
+        "Slot Penuh!", 
+        `Sesi #${activeBatch} sudah mencapai kapasitas (${currentMaxSlot} video). Klik tombol "+ Slot" untuk menambah kuota sesi ini.`
       );
       return;
     }
