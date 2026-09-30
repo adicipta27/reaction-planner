@@ -1,318 +1,412 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Content Reaction Planner</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reaction Planner - Adinoki & Adinoki Reaction</title>
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
-    /* Scrollbar halus & kustom khusus PC */
-    .custom-scrollbar::-webkit-scrollbar {
-      height: 6px;
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      transition: background-color 0.3s ease;
     }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 10px;
+    /* Hide scrollbar for category tabs */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   </style>
 </head>
-<body class="bg-neutral-100 min-h-screen w-full max-w-full overflow-x-hidden p-3 sm:p-6 lg:p-8 antialiased text-neutral-800">
+<body class="bg-[#fffbf5] text-neutral-800 min-h-screen pb-20">
 
-  <!-- Container Utama (Ukuran Proporsional PC) -->
-  <div class="max-w-6xl w-full mx-auto space-y-6 min-w-0 box-border">
-    
-    <!-- HEADER UTAMA -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight flex items-center gap-2.5">
-          <span class="text-orange-600">📙</span> Content Reaction Planner
-        </h1>
-        <p class="text-xs sm:text-sm text-neutral-500 font-medium mt-1">
-          Kelola link, thumbnail, dan kalkulasi estimasi durasi hasil edit YouTube.
-        </p>
-      </div>
-      <button id="btnOpenHistory" class="self-start sm:self-center bg-white hover:bg-neutral-50 text-neutral-800 border border-neutral-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer">
-        <span>📜</span> Riwayat Syuting
-      </button>
-    </div>
-
-    <!-- TAB CHANNEL SELECTOR -->
-    <div class="flex items-center gap-3 border-b border-neutral-200 pb-3">
-      <button id="tabAdinoki" class="px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-50/70 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer">
-        <span class="w-2.5 h-2.5 rounded-full bg-orange-600"></span> YT Adinoki
-      </button>
-      <button id="tabReaction" class="px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer">
-        <span>⚡</span> YT Adinoki Reaction
-      </button>
-    </div>
-
-    <!-- FORM INPUT LINK BARU -->
-    <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-xs border border-neutral-200/90 space-y-4 w-full min-w-0 box-border">
-      <div class="flex items-center justify-between flex-wrap gap-2">
-        <h2 class="text-base sm:text-lg font-black text-neutral-900 flex items-center gap-2">
-          <span>📌</span> Tambah Link Baru
-        </h2>
-        <span id="activeChannelBadge" class="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-full uppercase tracking-wider">
-          TARGET: YT ADINOKI
-        </span>
-      </div>
-
-      <div class="space-y-4">
-        <!-- Baris 1: Link + Paste + Ambil Caption Button -->
-        <div class="flex flex-col md:flex-row gap-2.5">
-          <div class="flex-1 flex gap-2 min-w-0">
-            <input type="text" id="tiktokUrl" placeholder="Paste link TikTok di sini..." class="w-full text-xs sm:text-sm px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:border-orange-500 bg-neutral-50/50">
-            <button id="btnPaste" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold px-4 py-3 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all border border-neutral-200 flex items-center gap-1.5 cursor-pointer">
-              📋 Paste
-            </button>
+  <!-- ========================================== -->
+  <!-- 1. HEADER & TAB CHANNEL                    -->
+  <!-- ========================================== -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-neutral-200/80 shadow-xs mb-6">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-4 pb-0">
+      
+      <!-- Top Title & Global Actions -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">REACTION PLANNER</h1>
+            <span id="activeChannelBadge" class="text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-lg bg-orange-600 text-white tracking-wider shadow-2xs">
+              TARGET: YT ADINOKI
+            </span>
           </div>
-          <button id="btnFetch" class="bg-neutral-900 hover:bg-black text-white font-bold px-6 py-3 rounded-xl text-xs sm:text-sm whitespace-nowrap transition-all shadow-xs cursor-pointer">
-            Ambil Caption & Thumbnail
+          <p class="text-xs text-neutral-500 font-semibold mt-0.5">Manajemen Bahan Content Reaction TikTok & YouTube</p>
+        </div>
+
+        <!-- Top Right Action Buttons -->
+        <div class="flex items-center gap-2">
+          <!-- Button Baca Komen -->
+          <button id="btnOpenBacaKomen" class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95">
+            <span>💬 Baca Komen</span>
+            <span id="badgeBacaKomenStatus" class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" title="Belum Lengkap"></span>
+          </button>
+
+          <!-- Button Riwayat -->
+          <button id="btnOpenHistory" class="bg-neutral-900 hover:bg-black text-white text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+            <span>📜 Riwayat</span>
           </button>
         </div>
+      </div>
 
-        <!-- Baris 2: 3 Kolom Input -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          <div>
-            <label class="block text-xs font-extrabold text-neutral-600 mb-1.5 uppercase tracking-wider">DURASI VIDEO *</label>
-            <input type="text" id="tiktokDuration" placeholder="Misal: 45 atau 1.25" class="w-full text-xs sm:text-sm px-4 py-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-orange-500 bg-neutral-50/50">
-            <span class="text-[11px] text-neutral-400 mt-1 block">Contoh: 45 (detik) atau 1.25 (1m 25s)</span>
-          </div>
-          <div>
-            <label class="block text-xs font-extrabold text-neutral-600 mb-1.5 uppercase tracking-wider">KATEGORI VIDEO</label>
-            <input type="text" id="tiktokCategory" placeholder="Gaming, Kuliner, dll..." class="w-full text-xs sm:text-sm px-4 py-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-orange-500 bg-neutral-50/50">
-          </div>
-          <div>
-            <label class="block text-xs font-extrabold text-neutral-600 mb-1.5 uppercase tracking-wider">CAPTION / CATATAN SYUTING</label>
-            <input type="text" id="tiktokCaption" placeholder="Caption akan terisi otomatis atau ketik catatan manual..." class="w-full text-xs sm:text-sm px-4 py-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-orange-500 bg-neutral-50/50">
-          </div>
-        </div>
-
-        <!-- Baris 3: Tombol Simpan -->
-        <button id="btnSave" class="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-black py-3.5 rounded-xl text-xs sm:text-sm shadow-md shadow-orange-500/20 transition-all uppercase tracking-wider cursor-pointer">
-          + Simpan ke Bank Video
+      <!-- Channel Switcher Tabs -->
+      <div class="flex items-center gap-1">
+        <button id="tabAdinoki" class="px-5 py-2.5 text-xs sm:text-sm font-extrabold border-b-2 border-orange-600 text-orange-600 bg-orange-100/80 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer shadow-2xs">
+          <span>🔥 YT Adinoki</span>
+        </button>
+        <button id="tabReaction" class="px-5 py-2.5 text-xs sm:text-sm font-bold text-neutral-500 hover:text-neutral-800 rounded-t-xl flex items-center gap-2 transition-all cursor-pointer">
+          <span>🔮 YT Adinoki Reaction</span>
         </button>
       </div>
-    </div>
 
-    <!-- MAIN GRID CONTAINER -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start w-full min-w-0">
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
+
+    <!-- ========================================== -->
+    <!-- 2. FORM INPUT TIKTOK                       -->
+    <!-- ========================================== -->
+    <section class="bg-white border border-neutral-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+      <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+        <h2 class="text-sm sm:text-base font-extrabold text-neutral-900 flex items-center gap-2">
+          <span>➕ Tambah Bahan TikTok Baru</span>
+        </h2>
+      </div>
+
+      <!-- Row 1: URL Input & Paste Button -->
+      <div class="space-y-2">
+        <label class="block text-xs font-bold text-neutral-700">Link TikTok</label>
+        <div class="flex gap-2">
+          <input 
+            type="url" 
+            id="tiktokUrl" 
+            placeholder="https://vt.tiktok.com/... atau https://www.tiktok.com/@user/video/..." 
+            class="flex-1 text-xs sm:text-sm p-3 border border-neutral-200 rounded-xl bg-neutral-50/50 focus:bg-white focus:outline-none focus:border-neutral-900 transition-all"
+          />
+          <button 
+            type="button" 
+            id="btnPaste" 
+            class="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-300 text-xs sm:text-sm px-3.5 py-3 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer active:scale-95"
+          >
+            📋 Tempel
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2: Fetch Button -->
+      <div>
+        <button 
+          type="button" 
+          id="btnFetch" 
+          class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs sm:text-sm py-2.5 rounded-xl font-bold transition-all cursor-pointer active:scale-98"
+        >
+          🔍 Ambil Caption & Thumbnail Otomatis
+        </button>
+      </div>
+
+      <!-- Row 3: Caption, Durasi, Kategori -->
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        <!-- Caption (8 Cols) -->
+        <div class="sm:col-span-6 space-y-1">
+          <label class="block text-xs font-bold text-neutral-700">Caption / Catatan</label>
+          <input 
+            type="text" 
+            id="tiktokCaption" 
+            placeholder="Masukkan caption atau deskripsi singkat video..." 
+            class="w-full text-xs sm:text-sm p-2.5 border border-neutral-200 rounded-xl bg-neutral-50/50 focus:bg-white focus:outline-none focus:border-neutral-900 transition-all"
+          />
+        </div>
+
+        <!-- Durasi (3 Cols) -->
+        <div class="sm:col-span-3 space-y-1">
+          <label class="block text-xs font-bold text-neutral-700">Durasi (Detik / Format 1.30)</label>
+          <input 
+            type="text" 
+            id="tiktokDuration" 
+            placeholder="ex: 45 atau 1.30" 
+            class="w-full text-xs sm:text-sm p-2.5 border border-neutral-200 rounded-xl bg-neutral-50/50 focus:bg-white focus:outline-none focus:border-neutral-900 transition-all"
+          />
+        </div>
+
+        <!-- Kategori (3 Cols) -->
+        <div class="sm:col-span-3 space-y-1">
+          <label class="block text-xs font-bold text-neutral-700">Kategori</label>
+          <input 
+            type="text" 
+            id="tiktokCategory" 
+            placeholder="ex: Horor, Lucu, Hantu" 
+            class="w-full text-xs sm:text-sm p-2.5 border border-neutral-200 rounded-xl bg-neutral-50/50 focus:bg-white focus:outline-none focus:border-neutral-900 transition-all"
+          />
+        </div>
+      </div>
+
+      <!-- Row 4: Submit Button -->
+      <button 
+        type="button" 
+        id="btnSave" 
+        class="w-full bg-neutral-900 hover:bg-black text-white text-xs sm:text-sm py-3 rounded-xl font-bold transition-all shadow-xs cursor-pointer active:scale-98"
+      >
+        💾 Simpan Ke Bank Video
+      </button>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. SESI SYUTING (DAFTAR SYUTING AKTIF)     -->
+    <!-- ========================================== -->
+    <section class="bg-white border border-neutral-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
       
-      <!-- KOLOM KIRI: SIAP SYUTING -->
-      <div class="bg-white border-2 border-orange-500/30 rounded-3xl p-5 sm:p-6 w-full min-w-0 box-border space-y-4 shadow-xs">
-        <div class="flex items-center justify-between flex-wrap gap-2">
-          <h2 class="text-base sm:text-xl font-black text-neutral-900 flex items-center gap-2">
-            🎯 Siap Syuting ( <span id="countSyuting">0</span> )
+      <!-- Header Info & Durasi Edit -->
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 pb-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-black text-neutral-900 flex items-center gap-2">
+            <span>🎬 Sesi Syuting Aktif</span>
+            <span class="text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200 px-2 py-0.5 rounded-full">
+              Slot: <strong id="countSyuting" class="text-orange-600">0 / 10</strong>
+            </span>
           </h2>
-          <div class="flex items-center gap-2 flex-wrap">
-            <!-- Tombol Trigger Modal Baca Komen -->
-            <button id="btnOpenBacaKomen" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs sm:text-sm px-3 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer">
-              💬 Baca Komen
-              <span id="badgeBacaKomenStatus" class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" title="Belum Lengkap"></span>
-            </button>
-            <button id="btnCopySyuting" disabled class="bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold opacity-60 cursor-not-allowed transition-all">
-              📋 Copy Poin Video
-            </button>
-            <button id="btnSelesaiSyuting" disabled class="bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-semibold opacity-60 cursor-not-allowed transition-all">
-              ✅ Selesai Syuting
-            </button>
-          </div>
+          <p class="text-xs text-neutral-500 font-medium">Video yang disiapkan untuk proses syuting reaction saat ini.</p>
         </div>
 
-        <!-- CONTAINER TAB SESI SYUTING (#1, #2, #3) -->
-        <div id="batchTabsContainer"></div>
-
-        <!-- BANNER ESTIMASI YOUTUBE -->
-        <div class="bg-neutral-900 text-white p-5 rounded-2xl w-full min-w-0 box-border shadow-md relative overflow-hidden">
-          <div class="flex justify-between items-start flex-wrap gap-2">
-            <div>
-              <div class="text-xs font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1">
-                ⏱️ ESTIMASI HASIL EDIT YOUTUBE
-              </div>
-              <div id="totalYtDuration" class="text-2xl sm:text-3xl font-black text-white mt-1">
-                0 Menit 0 Detik
-              </div>
-            </div>
-            <div id="badgeTikTokSum" class="text-xs font-bold bg-neutral-800 text-neutral-300 px-3 py-1 rounded-lg border border-neutral-700">
-              TOTAL BAHAN: 0s
-            </div>
-          </div>
-          <p class="text-xs text-neutral-400 font-medium mt-2 leading-relaxed">
-            Termasuk Trailer (45s), Bumper (6s), Opening (45s), Reaksi+Komen (+1m/video), Closing (75s), & Outro (20s)
-          </p>
-        </div>
-
-        <!-- LIST SYUTING -->
-        <div id="listSyuting" class="space-y-4 w-full min-w-0">
-          <!-- Render Javascript -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="badgeTikTokSum" class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200">
+            TOTAL BAHAN: 0S
+          </span>
+          <span class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 border border-orange-200">
+            EST. EDIT YT: <strong id="totalYtDuration">0 Menit 0 Detik</strong>
+          </span>
         </div>
       </div>
 
-      <!-- KOLOM KANAN: BANK VIDEO / CADANGAN -->
-      <div class="bg-white rounded-3xl p-5 sm:p-6 w-full min-w-0 box-border space-y-4 shadow-xs border border-neutral-200/90">
-        <div class="flex items-center justify-between flex-wrap gap-2">
-          <h2 class="text-base sm:text-xl font-black text-neutral-900 flex items-center gap-2">
-            📦 Bank Video / Cadangan ( <span id="countBank">0</span> )
+      <!-- Container Batch Tabs (Sesi #1, Sesi #2, Sesi #3 + Tombol Slot) -->
+      <div id="batchTabsContainer">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- List Video Syuting (Drag & Drop Supported) -->
+      <div id="listSyuting" class="space-y-3 min-h-[100px]">
+        <!-- Cards rendered dynamically by app.js -->
+      </div>
+
+      <!-- Bottom Action Buttons (Copy & Selesai) -->
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+        <button 
+          id="btnCopySyuting" 
+          disabled
+          class="bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold opacity-60 cursor-not-allowed transition-all"
+        >
+          📋 Copy Teks Syuting
+        </button>
+
+        <button 
+          id="btnSelesaiSyuting" 
+          disabled
+          class="bg-neutral-100 text-neutral-400 border border-neutral-200 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-semibold transition-all flex items-center gap-1 opacity-60 cursor-not-allowed"
+        >
+          ✅ Selesai Syuting & Simpan Riwayat
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. BANK VIDEO                              -->
+    <!-- ========================================== -->
+    <section class="bg-white border border-neutral-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+      
+      <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-black text-neutral-900 flex items-center gap-2">
+            <span>📦 Bank Video Bahan</span>
+            <span class="text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200 px-2 py-0.5 rounded-full">
+              Total: <strong id="countBank" class="text-neutral-900">0</strong>
+            </span>
           </h2>
-        </div>
-
-        <!-- TAB KATEGORI DENGAN NAVIGASI PANAH SCROLL -->
-        <div class="relative flex items-center gap-1.5 w-full min-w-0">
-          <button id="btnScrollLeft" class="flex items-center justify-center w-8 h-8 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-black border border-neutral-200 flex-shrink-0 transition-all text-xs active:scale-90 cursor-pointer" title="Scroll Kiri">
-            ◀
-          </button>
-          
-          <div id="categoryTabs" class="flex gap-2 overflow-x-auto pb-2 pt-1 w-full min-w-0 scroll-smooth custom-scrollbar">
-            <!-- Render Javascript -->
-          </div>
-
-          <button id="btnScrollRight" class="flex items-center justify-center w-8 h-8 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-black border border-neutral-200 flex-shrink-0 transition-all text-xs active:scale-90 cursor-pointer" title="Scroll Kanan">
-            ▶
-          </button>
-        </div>
-
-        <!-- LIST BANK VIDEO -->
-        <div id="listBank" class="space-y-4 w-full min-w-0">
-          <!-- Render Javascript -->
+          <p class="text-xs text-neutral-500 font-medium">Koleksi bahan video yang siap dimasukkan ke Sesi Syuting.</p>
         </div>
       </div>
 
-    </div>
+      <!-- Filter Kategori & Akun Bar -->
+      <div class="flex items-center gap-2">
+        <button id="btnScrollLeft" type="button" class="p-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs flex-shrink-0 cursor-pointer">
+          ◀
+        </button>
+        
+        <div id="categoryTabs" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 w-full">
+          <!-- Rendered dynamically by app.js -->
+        </div>
 
-  </div>
+        <button id="btnScrollRight" type="button" class="p-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs flex-shrink-0 cursor-pointer">
+          ▶
+        </button>
+      </div>
 
-  <!-- MODAL BACA KOMEN & SUPER THANKS -->
-  <div id="bacaKomenModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 z-50 hidden">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl min-w-0 max-h-[90vh] flex flex-col">
-      <div class="flex justify-between items-center border-b pb-3 flex-shrink-0">
-        <h3 class="font-bold text-base sm:text-lg text-neutral-900 flex items-center gap-2">
-          <span>💬</span> Pengaturan Baca Komen & Super Thanks
+      <!-- List Bank Video -->
+      <div id="listBank" class="grid grid-cols-1 gap-3">
+        <!-- Cards rendered dynamically by app.js -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- 5. MODAL: BACA KOMEN & SUPER THANKS        -->
+  <!-- ========================================== -->
+  <div id="bacaKomenModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-lg w-full p-5 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+        <h3 class="font-extrabold text-neutral-900 text-base flex items-center gap-2">
+          <span>💬 Data Baca Komen & Super Thanks</span>
         </h3>
-        <button id="btnCloseBacaKomenModalX" class="text-neutral-400 hover:text-black text-xl cursor-pointer">✕</button>
+        <button id="btnCloseBacaKomenModalX" class="text-neutral-400 hover:text-black font-bold text-base p-1">✕</button>
       </div>
-      
-      <div class="overflow-y-auto space-y-4 pr-1 flex-1">
-        <p class="text-xs text-neutral-500 leading-relaxed">
-          Lengkapi link YouTube dan 2 akun wajib dibacakan. Anda juga bisa menambah daftar <strong>Super Thanks</strong> secara bebas (tanpa batasan).
-        </p>
 
-        <!-- INPUT WAJIB -->
-        <div class="space-y-3 text-xs sm:text-sm">
-          <div>
-            <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Link Video YouTube *</label>
-            <input type="url" id="bacaKomenYtUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
+      <div class="space-y-3">
+        <div class="space-y-1">
+          <label class="block text-xs font-bold text-neutral-700">Link Video YouTube Baca Komen <span class="text-red-500">*</span></label>
+          <input type="url" id="bacaKomenYtUrl" placeholder="https://youtube.com/watch?v=..." class="w-full text-xs p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 focus:bg-white focus:outline-none focus:border-neutral-900">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-neutral-700">Akun #1 <span class="text-red-500">*</span></label>
+            <input type="text" id="bacaKomenAccount1" placeholder="@username1" class="w-full text-xs p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 focus:bg-white focus:outline-none focus:border-neutral-900">
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Nama Akun #1 *</label>
-              <input type="text" id="bacaKomenAccount1" placeholder="Nama akun..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
-            </div>
-            <div>
-              <label class="block font-bold mb-1 text-neutral-700 uppercase tracking-wider text-[11px]">Nama Akun #2 *</label>
-              <input type="text" id="bacaKomenAccount2" placeholder="Nama akun..." class="w-full p-2.5 border border-neutral-200 rounded-xl focus:outline-none focus:border-amber-500 bg-neutral-50/50">
-            </div>
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-neutral-700">Akun #2 <span class="text-red-500">*</span></label>
+            <input type="text" id="bacaKomenAccount2" placeholder="@username2" class="w-full text-xs p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 focus:bg-white focus:outline-none focus:border-neutral-900">
           </div>
         </div>
 
-        <!-- SEKSI SUPER THANKS (DINAMIS UNLIMITED) -->
-        <div class="pt-3 border-t border-neutral-100 space-y-3">
+        <!-- Super Thanks Container -->
+        <div class="space-y-2 pt-2 border-t border-neutral-100">
           <div class="flex justify-between items-center">
-            <label class="block font-bold text-amber-900 uppercase tracking-wider text-[11px] flex items-center gap-1">
-              <span>💖</span> Daftar Super Thanks (Opsional)
-            </label>
-            <button id="btnAddSuperThanks" type="button" class="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer">
+            <label class="block text-xs font-bold text-neutral-700">💖 Super Thanks (Opsional)</label>
+            <button type="button" id="btnAddSuperThanks" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer">
               + Tambah Item
             </button>
           </div>
 
           <div id="superThanksContainer" class="space-y-2">
-            <!-- Render Dynamic Super Thanks Rows -->
+            <!-- Super Thanks Rows rendered here -->
           </div>
         </div>
       </div>
 
-      <div class="flex justify-end gap-2 pt-3 border-t border-neutral-100 flex-shrink-0">
-        <button id="btnCancelBacaKomen" class="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-xl font-bold text-xs sm:text-sm cursor-pointer hover:bg-neutral-200 transition-all">Batal</button>
-        <button id="btnSaveBacaKomen" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs sm:text-sm cursor-pointer transition-all">Simpan Data</button>
+      <div class="flex justify-end gap-2 pt-3 border-t border-neutral-100">
+        <button id="btnCancelBacaKomen" class="text-xs font-bold px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-100 cursor-pointer">Batal</button>
+        <button id="btnSaveBacaKomen" class="text-xs font-bold px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-xs cursor-pointer">Simpan Data</button>
       </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 6. MODAL: EDIT VIDEO                       -->
+  <!-- ========================================== -->
+  <div id="editModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-md w-full p-5 space-y-4 shadow-xl">
       
-    </div>
-  </div>
-
-  <!-- MODAL EDIT -->
-  <div id="editModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 z-50 hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl min-w-0">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="font-bold text-base sm:text-lg">Edit Data Video</h3>
-        <button id="btnCloseModalX" class="text-neutral-400 hover:text-black text-xl cursor-pointer">✕</button>
+      <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+        <h3 class="font-extrabold text-neutral-900 text-base">✏️ Edit Informasi Video</h3>
+        <button id="btnCloseModalX" class="text-neutral-400 hover:text-black font-bold text-base p-1">✕</button>
       </div>
-      <div class="space-y-3 text-xs sm:text-sm">
-        <div>
-          <label class="block font-bold mb-1">Durasi</label>
-          <input type="text" id="modalDurationInput" class="w-full p-2.5 border rounded-xl">
+
+      <div class="space-y-3">
+        <div class="space-y-1">
+          <label class="block text-xs font-bold text-neutral-700">Caption Video</label>
+          <textarea id="modalCaptionInput" rows="3" class="w-full text-xs p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 focus:bg-white focus:outline-none focus:border-neutral-900"></textarea>
         </div>
-        <div>
-          <label class="block font-bold mb-1">Kategori</label>
-          <input type="text" id="modalCategoryInput" class="w-full p-2.5 border rounded-xl">
-        </div>
-        <div>
-          <label class="block font-bold mb-1">Caption</label>
-          <textarea id="modalCaptionInput" rows="3" class="w-full p-2.5 border rounded-xl"></textarea>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-neutral-700">Kategori</label>
+            <input type="text" id="modalCategoryInput" class="w-full text-xs p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 focus:bg-white focus:outline-none focus:border-neutral-900">
+          </div>
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-neutral-700">Durasi (Format Detik / 1.30)</label>
+            <input type="text" id="modalDurationInput" class="w-full text-xs p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 focus:bg-white focus:outline-none focus:border-neutral-900">
+          </div>
         </div>
       </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button id="btnCancelEdit" class="px-4 py-2 bg-neutral-100 rounded-xl font-bold text-xs sm:text-sm cursor-pointer">Batal</button>
-        <button id="btnSaveEdit" class="px-4 py-2 bg-orange-600 text-white rounded-xl font-bold text-xs sm:text-sm cursor-pointer">Simpan Perubahan</button>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-neutral-100">
+        <button id="btnCancelEdit" class="text-xs font-bold px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-100 cursor-pointer">Batal</button>
+        <button id="btnSaveEdit" class="text-xs font-bold px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-black text-white shadow-xs cursor-pointer">Simpan Perubahan</button>
       </div>
+
     </div>
   </div>
 
-  <!-- MODAL CUSTOM ALERT -->
-  <div id="customAlertModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 z-50 hidden">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-5 text-center space-y-3 shadow-2xl">
-      <h3 id="customAlertTitle" class="font-bold text-base sm:text-lg text-neutral-900">Peringatan!</h3>
-      <p id="customAlertMessage" class="text-xs sm:text-sm text-neutral-600 leading-relaxed"></p>
-      <button id="btnCloseCustomAlert" class="w-full py-2.5 bg-neutral-900 text-white font-bold rounded-xl text-xs sm:text-sm cursor-pointer">Mengerti</button>
-    </div>
-  </div>
-
-  <!-- MODAL CONFIRMATION -->
-  <div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 z-50 hidden">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
-      <h3 class="font-bold text-base sm:text-lg text-neutral-900">Konfirmasi Selesai</h3>
-      <p class="text-xs sm:text-sm text-neutral-600 leading-relaxed">Apakah kamu yakin ingin menyelesaikan sesi syuting ini? Semua video di daftar Siap Syuting akan dipindahkan ke Riwayat.</p>
-      <div class="flex gap-2">
-        <button id="btnCancelConfirm" class="w-1/2 py-2.5 bg-neutral-100 font-bold rounded-xl text-xs sm:text-sm text-neutral-700 cursor-pointer">Batal</button>
-        <button id="btnActionConfirm" class="w-1/2 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs sm:text-sm cursor-pointer">Ya, Selesai</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL HISTORY -->
-  <div id="historyModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 z-50 hidden">
-    <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col p-5 sm:p-6 space-y-4 shadow-2xl min-w-0">
-      <div class="flex justify-between items-center border-b pb-3">
+  <!-- ========================================== -->
+  <!-- 7. MODAL: RIWAYAT SYUTING                  -->
+  <!-- ========================================== -->
+  <div id="historyModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-4xl w-full p-5 sm:p-6 space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
+      
+      <div class="flex justify-between items-center border-b border-neutral-100 pb-3 flex-shrink-0">
         <div>
-          <h3 class="font-bold text-lg text-neutral-900">Riwayat Syuting</h3>
-          <p id="historySubTitle" class="text-xs text-neutral-500">Menampilkan riwayat</p>
+          <h3 class="font-extrabold text-neutral-900 text-base sm:text-lg">📜 Riwayat Syuting Selesai</h3>
+          <p id="historySubTitle" class="text-xs text-neutral-500 font-medium">Menampilkan riwayat untuk channel aktif</p>
         </div>
-        <button id="btnCloseHistoryModal" class="text-neutral-400 hover:text-black text-xl cursor-pointer">✕</button>
+        <button id="btnCloseHistoryModal" class="text-neutral-400 hover:text-black font-bold text-lg p-1">✕</button>
       </div>
-      <div id="historyList" class="flex-1 overflow-y-auto space-y-4 pr-1">
-        <!-- Render Javascript -->
+
+      <div id="historyList" class="overflow-y-auto space-y-4 flex-1 pr-1">
+        <!-- History items rendered dynamically by app.js -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 8. MODAL: KONFIRMASI SELESAI SYUTING       -->
+  <!-- ========================================== -->
+  <div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-sm w-full p-5 space-y-4 shadow-xl text-center">
+      <div class="text-3xl">🎉</div>
+      <h3 class="font-extrabold text-neutral-900 text-base">Selesaikan Sesi Syuting Ini?</h3>
+      <p class="text-xs text-neutral-600 leading-relaxed">
+        Seluruh video pada sesi syuting aktif ini akan dipindahkan ke <strong>Riwayat Syuting</strong> dan dihapus dari daftar aktif.
+      </p>
+
+      <div class="flex justify-center gap-2 pt-2">
+        <button id="btnCancelConfirm" class="text-xs font-bold px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-100 cursor-pointer">Batal</button>
+        <button id="btnActionConfirm" class="text-xs font-bold px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer">Ya, Selesaikan!</button>
       </div>
     </div>
   </div>
 
-  <!-- App Script (ES Module) -->
+  <!-- ========================================== -->
+  <!-- 9. MODAL: CUSTOM ALERT                     -->
+  <!-- ========================================== -->
+  <div id="customAlertModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-sm w-full p-5 space-y-3 shadow-xl text-center">
+      <div class="text-2xl">⚠️</div>
+      <h3 id="customAlertTitle" class="font-extrabold text-neutral-900 text-base">Peringatan!</h3>
+      <p id="customAlertMessage" class="text-xs text-neutral-600 leading-relaxed whitespace-pre-line"></p>
+
+      <div class="pt-2">
+        <button id="btnCloseCustomAlert" class="w-full text-xs font-bold px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-black text-white shadow-xs cursor-pointer">Mengerti</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript App -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
